@@ -22,7 +22,7 @@ store/
 | --- | --- |
 | App name | Shadow Runner (store name "Shadow Runner: Two Worlds") |
 | Android package / iOS bundle ID | `com.certidevelopment.shadowrunner` |
-| Version | 1.0.0 (Android versionCode 1, iOS buildNumber 1) |
+| Version | 1.0.0 (Android versionCode 2, iOS buildNumber 2) |
 | Expo project | `@certi-development/shadow-runner` (ID `9b1c9adc-0803-4024-a167-b37429a1d734`) |
 
 ---
@@ -49,7 +49,7 @@ eas build -p android --profile production
 
 The AAB is signed with the upload key from `credentials.json` (local credentials).
 
-The 1.0.0 (1) bundle is in `store/builds/shadow-runner-1.0.0-1.aab`.
+The 1.0.0 (2) bundle is in `store/builds/shadow-runner-1.0.0-2.aab`.
 
 ### First upload (must be done by hand once)
 
