@@ -1,0 +1,9 @@
+{
+  "appId": "com.certidevelopment.shadowrunner",
+  "appName": "Shadow Runner",
+  "webDir": "dist",
+  "backgroundColor": "#120e2a",
+  "android": {
+    "allowMixedContent": false
+  }
+}
