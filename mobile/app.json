@@ -11,7 +11,7 @@
     "primaryColor": "#7b5cff",
     "ios": {
       "bundleIdentifier": "com.certidevelopment.shadowrunner",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "supportsTablet": true,
       "requireFullScreen": true,
       "config": {
@@ -29,7 +29,7 @@
     },
     "android": {
       "package": "com.certidevelopment.shadowrunner",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
