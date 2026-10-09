@@ -1,6 +1,6 @@
 import { GameContext } from '../GameContext';
-import { gameplayLayout } from '../rendering/Layout';
-import { backgroundScale, laneTextures } from '../rendering/TextureFactory';
+import { loadModels } from '../three/Models';
+import { Renderer3D } from '../three/Renderer3D';
 import { ProgressBar } from '../ui/ProgressBar';
 import { drawLogo } from '../ui/Logo';
 import { addText } from '../ui/Typography';
@@ -8,8 +8,8 @@ import { COLORS } from '../utils/Constants';
 import { BaseScene } from './BaseScene';
 
 /**
- * Loading screen: the logo with the runner above and its shadow below, and a progress bar while the
- * procedural world textures are generated (spread over several frames so the screen stays animated).
+ * Loading screen: the logo and a progress bar while the 3D models are decoded; the 3D canvas behind
+ * the Phaser canvas is created here.
  */
 export class LoadingScene extends BaseScene {
   constructor() {
@@ -29,11 +29,17 @@ export class LoadingScene extends BaseScene {
     const bar = new ProgressBar(this, W / 2, H * 0.68, { width: 420, height: 22, fill: COLORS.accent, track: 0xffffff, trackAlpha: 0.2 });
     const label = addText(this, W / 2, H * 0.68 + 50, 'Building two worlds…', { size: 26, weight: '500', color: COLORS.creamText });
 
-    // Generate the first world's lane textures (other worlds are generated when they are entered).
-    const s = backgroundScale(this.k, GameContext.profile.lowEnd);
-    const laneH = gameplayLayout(H, this.safeTop, this.safeBottom).laneH;
-    const jobs: (() => void)[] = [() => laneTextures(this, 'city', 'real', W, laneH, s), () => laneTextures(this, 'city', 'shadow', W, laneH, s)];
-    const total = jobs.length;
+    // The 3D canvas sits behind Phaser's; the bundled models load in the background meanwhile.
+    Renderer3D.init(this.game.canvas, W, H, { lowEnd: GameContext.profile.lowEnd });
+    let modelProgress = 0;
+    let modelsDone = false;
+    let failed = false;
+    loadModels((f) => (modelProgress = f))
+      .then(() => (modelsDone = true))
+      .catch(() => {
+        failed = true;
+        label.setText('Could not load the game data – please restart.');
+      });
     let t = 0;
     const tick = (_time: number, delta: number) => {
       t += delta / 1000;
@@ -44,11 +50,8 @@ export class LoadingScene extends BaseScene {
         wave.fillCircle(x, y, 2.5);
       }
       bar.tick(delta / 1000);
-      const job = jobs.shift();
-      if (job) {
-        job();
-        bar.setValue(1 - jobs.length / total);
-      } else if (t > 0.9) {
+      bar.setValue(modelProgress);
+      if (modelsDone && t > 0.9 && !failed) {
         label.setText('Ready!');
         // Only remove our own listener – Phaser's tweens and camera effects also listen to 'update'.
         this.events.off('update', tick);

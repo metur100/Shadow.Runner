@@ -5,7 +5,7 @@ import { LEVELS } from '../levels/LevelData';
 import type { Side } from '../levels/LevelDefinition';
 import { WORLDS } from '../levels/WorldDefinitions';
 import { Monetization } from '../monetization/MonetizationManager';
-import { drawRunner } from '../rendering/CharacterRenderer';
+import { runnerPortrait } from '../three/Portraits';
 import { AudioManager } from '../systems/AudioManager';
 import { selectedColors } from '../systems/Cosmetics';
 import { todayKey } from '../systems/DailyChallenge';
@@ -103,40 +103,25 @@ export class ResultScene extends BaseScene {
   private addCharacters(y: number, success: boolean): void {
     const save = GameContext.save;
     const colors = { real: selectedColors(save.cosmetics.selected, 'costume'), shadow: selectedColors(save.cosmetics.selected, 'shadowForm') };
-    const g1 = this.add.graphics().setPosition(this.W / 2 - 70, y);
-    const g2 = this.add.graphics().setPosition(this.W / 2 + 70, y);
     const failed = this.result.failForm;
-    let t = 0;
-    const draw = () => {
-      for (const [g, side] of [
-        [g1, 'real'],
-        [g2, 'shadow'],
-      ] as [Phaser.GameObjects.Graphics, Side][]) {
-        g.clear();
-        const hurt = !success && failed === side;
-        drawRunner(g, {
-          side,
-          anim: hurt ? 'hit' : success ? 'jump' : 'idle',
-          phase: 0,
-          time: t,
-          colors: colors[side],
-          cheer: success,
-          glow: hurt ? 0 : 0.6,
-        });
-        // Celebrating forms bounce.
-        g.y = y - (success && !GameContext.reducedMotion ? Math.abs(Math.sin(t * 5 + (side === 'real' ? 0 : 1.2))) * 26 : 0);
-        g.setAlpha(hurt ? 0.6 : 1);
-      }
-    };
-    draw();
-    if (!GameContext.reducedMotion) {
+    const imgs: [Phaser.GameObjects.Image, Side][] = [];
+    for (const [side, dx] of [
+      ['real', -80],
+      ['shadow', 80],
+    ] as [Side, number][]) {
+      const hurt = !success && failed === side;
+      // 3D portraits: waving after a win, hurt when this form failed.
+      const key = runnerPortrait(this, side, colors[side], success ? 'wave' : hurt ? 'hit' : 'idle', success ? 0.5 : hurt ? 0.25 : 0.4);
+      if (!key) continue;
+      const img = this.add.image(this.W / 2 + dx, y - 70, key).setDisplaySize(136, 170).setAlpha(hurt ? 0.6 : 1);
+      imgs.push([img, side]);
+    }
+    if (success && !GameContext.reducedMotion) {
+      let t = 0;
       this.events.on('update', (_time: number, delta: number) => {
         t += delta / 1000;
-        draw();
+        for (const [img, side] of imgs) img.y = y - 70 - Math.abs(Math.sin(t * 5 + (side === 'real' ? 0 : 1.2))) * 22;
       });
-    }
-    if (!success && failed) {
-      addText(this, failed === 'real' ? this.W / 2 - 70 : this.W / 2 + 70, y + 26, formName(failed), { size: 20, weight: '700', color: '#ffb3bb' });
     }
   }
 

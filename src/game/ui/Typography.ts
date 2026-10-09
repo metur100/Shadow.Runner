@@ -6,7 +6,7 @@ import { COLORS, FONT_FAMILY } from '../utils/Constants';
 export interface TextOptions {
   size?: number;
   color?: string;
-  weight?: '400' | '500' | '600' | '700';
+  weight?: '400' | '500' | '600' | '700' | 'italic 700';
   align?: 'left' | 'center' | 'right';
   origin?: [number, number];
   wrapWidth?: number;

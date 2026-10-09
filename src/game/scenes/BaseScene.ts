@@ -2,11 +2,9 @@ import Phaser from 'phaser';
 
 import { GameContext } from '../GameContext';
 import type { ThemeId } from '../levels/LevelDefinition';
-import { drawRunnerBack } from '../rendering/CharacterRenderer';
 import { gameplayLayout } from '../rendering/Layout';
-import { LaneCamera } from '../rendering/Perspective';
-import { SceneryRenderer, sceneryStyle } from '../rendering/Scenery';
-import { backgroundScale, GROUND_H, laneTextures, trimLaneTextures } from '../rendering/TextureFactory';
+import { Renderer3D } from '../three/Renderer3D';
+import { World3D } from '../three/World3D';
 import { lanePalette } from '../rendering/Themes';
 import { selectedColors } from '../systems/Cosmetics';
 import { Button } from '../ui/Button';
@@ -66,58 +64,67 @@ export abstract class BaseScene extends Phaser.Scene {
   }
 
   /**
-   * Menu background: the reality street above, the shadow street below, both seen from behind the
-   * runner and rolling slowly towards the horizon, with a glowing seam between them and (optionally)
-   * the runner and its shadow running away from the camera.
+   * Menu background: the 3D reality street above and the shadow street below, with the runner and its
+   * shadow running away from the camera, split by a glowing seam at `seamY`.
    */
-  protected addTwinBackground(theme: ThemeId = 'city', runners = false, seamY = this.H * 0.5): void {
-    const s = backgroundScale(this.k, GameContext.profile.lowEnd);
-    trimLaneTextures(this, ['city', theme]);
-    const laneH = gameplayLayout(this.H, this.safeTop, this.safeBottom).laneH;
+  protected addTwinBackground(theme: ThemeId = 'city', runners = true, seamY = this.H * 0.5): void {
     const topH = Math.round(seamY);
-    const detail = !GameContext.profile.lowEnd;
     const save = GameContext.save;
     const colors = { real: selectedColors(save.cosmetics.selected, 'costume'), shadow: selectedColors(save.cosmetics.selected, 'shadowForm') };
-    const worlds = (['real', 'shadow'] as const).map((side) => {
-      // The reality half is anchored on the seam from above, the shadow half hangs below it.
-      const top = side === 'real' ? topH - laneH : topH;
-      const tex = laneTextures(this, theme, side, this.W, laneH, s);
-      const pal = lanePalette(theme, side);
-      this.add.rectangle(0, side === 'real' ? 0 : topH, this.W, side === 'real' ? topH : this.H - topH, side === 'real' ? pal.skyTop : sceneryStyle(theme, side).walk).setOrigin(0);
-      const c = this.add.container(0, top);
-      const cam = new LaneCamera(this.W, laneH);
-      const sky = this.add.image(0, 0, tex.sky).setOrigin(0).setDisplaySize(this.W, laneH);
-      const skylineH = laneH * 0.62;
-      const skyline = this.add.image(0, cam.horizon + 4 - skylineH * (1 - GROUND_H / laneH), tex.far).setOrigin(0).setDisplaySize(this.W, skylineH).setAlpha(0.75);
-      const street = this.add.graphics();
-      const runner = this.add.graphics();
-      c.add([sky, skyline, street, runner]);
-      const scenery = new SceneryRenderer(cam, sceneryStyle(theme, side), 7, detail);
-      return { side, cam, street, runner, scenery };
-    });
+    const portal = selectedColors(save.cosmetics.selected, 'portal');
+    if (!Renderer3D.available) {
+      // No WebGL for the 3D worlds: plain day / night halves.
+      this.add.rectangle(0, 0, this.W, topH, lanePalette(theme, 'real').skyTop).setOrigin(0);
+      this.add.rectangle(0, topH, this.W, this.H - topH, lanePalette(theme, 'shadow').skyBottom).setOrigin(0);
+    } else {
+      this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+      const worlds = (['real', 'shadow'] as const).map(
+        (side) =>
+          new World3D({
+            side,
+            theme,
+            session: null,
+            runnerColors: colors[side],
+            portalColors: portal,
+            highContrast: false,
+            reducedMotion: GameContext.reducedMotion,
+            detail: !GameContext.profile.lowEnd,
+            seed: side === 'real' ? 11 : 12,
+          }),
+      );
+      if (!runners) for (const w of worlds) w.runner.root.visible = false;
+      Renderer3D.show(this);
+      let scroll = 0;
+      let t = 0;
+      const draw = (dt: number) => {
+        t += dt;
+        scroll += (GameContext.reducedMotion ? 0 : 6.5 * 42) * dt;
+        for (const w of worlds) {
+          w.update(scroll, t, dt, { anim: 'run', h: 0, solid: true, speed: 6.5, cheer: false, reducedMotion: GameContext.reducedMotion }, true);
+        }
+        // Each half shows its world's lower part (street and runner) like the gameplay lanes.
+        const laneH = gameplayLayout(this.H, this.safeTop, this.safeBottom).laneH;
+        Renderer3D.render([
+          { world: worlds[0], x: 0, y: topH - laneH, w: this.W, h: laneH },
+          { world: worlds[1], x: 0, y: topH, w: this.W, h: laneH },
+        ]);
+      };
+      draw(0.016);
+      const handler = (_t: number, delta: number) => draw(Math.min(delta, 100) / 1000);
+      this.events.on('update', handler);
+      this.events.once('shutdown', () => {
+        this.events.off('update', handler);
+        for (const w of worlds) w.dispose();
+        Renderer3D.hide(this);
+      });
+    }
     // Darken both halves a little so UI on top stays readable.
-    this.add.rectangle(0, 0, this.W, this.H, COLORS.night, 0.35).setOrigin(0);
+    this.add.rectangle(0, 0, this.W, this.H, COLORS.night, 0.3).setOrigin(0);
     const seam = this.add.graphics();
     seam.fillStyle(0x9fe8ff, 0.35);
     seam.fillRect(0, topH - 8, this.W, 16);
     seam.fillStyle(0xffffff, 0.9);
     seam.fillRect(0, topH - 2, this.W, 4);
-    let t = 0;
-    const draw = (dt: number) => {
-      t += dt;
-      for (const w of worlds) {
-        w.cam.scroll = t * 240;
-        w.street.clear();
-        w.scenery.draw(w.street);
-        if (runners) {
-          w.runner.clear();
-          drawRunnerBack(w.runner, { side: w.side, anim: 'run', phase: t * 11, time: t, colors: colors[w.side], glow: 0.5 });
-          w.runner.setPosition(w.cam.cx, w.cam.runnerY(0)).setScale(w.cam.s0 * 1.25);
-        }
-      }
-    };
-    draw(0);
-    if (!GameContext.reducedMotion) this.events.on('update', (_t: number, delta: number) => draw(Math.min(delta, 100) / 1000));
   }
 
   /** Back button + centred title along the top safe edge. Returns the y below the header. */

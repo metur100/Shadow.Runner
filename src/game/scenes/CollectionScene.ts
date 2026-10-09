@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 
 import { GameContext } from '../GameContext';
-import { drawRunner } from '../rendering/CharacterRenderer';
+import { runnerPortrait } from '../three/Portraits';
 import { CATEGORY_LABELS, cosmeticsIn, describeRequirement, selectedColors, type CosmeticCategory, type CosmeticItem } from '../systems/Cosmetics';
 import { levelName, requirementMet } from '../systems/LevelManager';
 import { Button } from '../ui/Button';
@@ -36,22 +36,22 @@ export class CollectionScene extends BaseScene {
     const save = GameContext.save;
 
     // Live preview of the current look.
-    const real = this.add.graphics().setPosition(this.W / 2 - 80, y + 120).setScale(1.3);
-    const shade = this.add.graphics().setPosition(this.W / 2 + 80, y + 120).setScale(1.3);
-    let t = 0;
-    const draw = () => {
-      real.clear();
-      shade.clear();
-      drawRunner(real, { side: 'real', anim: 'run', phase: t * 10, time: t, colors: selectedColors(GameContext.save.cosmetics.selected, 'costume'), glow: 0.6 });
-      drawRunner(shade, { side: 'shadow', anim: 'run', phase: t * 10, time: t, colors: selectedColors(GameContext.save.cosmetics.selected, 'shadowForm'), glow: 0.6 });
+    // 3D portraits of the current look (re-rendered when the selection changes).
+    const real = this.add.image(this.W / 2 - 80, y + 64, '__DEFAULT').setVisible(false);
+    const shade = this.add.image(this.W / 2 + 80, y + 64, '__DEFAULT').setVisible(false);
+    let shown = '';
+    const refresh = () => {
+      const sel = GameContext.save.cosmetics.selected;
+      const key = `${sel.costume}|${sel.shadowForm}`;
+      if (key === shown) return;
+      shown = key;
+      const kr = runnerPortrait(this, 'real', selectedColors(sel, 'costume'), 'idle', 0.4);
+      const ks = runnerPortrait(this, 'shadow', selectedColors(sel, 'shadowForm'), 'idle', 1.1);
+      if (kr) real.setTexture(kr).setDisplaySize(112, 140).setVisible(true);
+      if (ks) shade.setTexture(ks).setDisplaySize(112, 140).setVisible(true);
     };
-    draw();
-    if (!GameContext.reducedMotion) {
-      this.events.on('update', (_time: number, d: number) => {
-        t += d / 1000;
-        draw();
-      });
-    }
+    refresh();
+    this.events.on('update', refresh);
     const unlockedCount = save.cosmetics.unlocked.length;
     addText(this, this.W / 2, y + 160, `${unlockedCount} of 25 unlocked · cosmetic only`, { size: 20, weight: '500', color: COLORS.muted });
     y += 200;
@@ -127,15 +127,14 @@ export class CollectionScene extends BaseScene {
 }
 
 /** Preview of a cosmetic item centred on (x, y), about `size` units tall. */
-export function createCosmeticPreview(scene: Phaser.Scene, item: CosmeticItem, x: number, y: number, size: number): Phaser.GameObjects.Graphics {
+export function createCosmeticPreview(scene: Phaser.Scene, item: CosmeticItem, x: number, y: number, size: number): Phaser.GameObjects.GameObject {
+  if (item.category === 'costume' || item.category === 'shadowForm') {
+    const key = runnerPortrait(scene, item.category === 'costume' ? 'real' : 'shadow', item.colors, 'idle', item.category === 'costume' ? 0.4 : 1.1, 160, 200);
+    if (key) return scene.add.image(x, y + size * 0.05, key).setDisplaySize(size * 0.96, size * 1.2);
+  }
   const g = scene.add.graphics();
   const [a, b, c] = item.colors;
   switch (item.category) {
-    case 'costume':
-    case 'shadowForm':
-      drawRunner(g, { side: item.category === 'costume' ? 'real' : 'shadow', anim: 'idle', phase: 0, time: 0, colors: item.colors, glow: 0.5 });
-      g.setPosition(x, y + size * 0.5).setScale(size / 95);
-      break;
     case 'trail':
       for (let i = 0; i < 7; i++) {
         g.fillStyle(i % 2 ? b : a, 1 - i * 0.12);

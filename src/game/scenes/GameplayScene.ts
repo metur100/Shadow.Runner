@@ -1,14 +1,12 @@
-import Phaser from 'phaser';
 
 import { nextLightDistance } from '../entities/LightZone';
 import { GameContext } from '../GameContext';
 import { LEVELS } from '../levels/LevelData';
 import type { Form, LevelDefinition, Side, TutorialStep } from '../levels/LevelDefinition';
-import { drawRunnerBack } from '../rendering/CharacterRenderer';
 import { FxPool } from '../rendering/FxPool';
 import { gameplayLayout, type GameplayLayout } from '../rendering/Layout';
 import { LaneView } from '../rendering/LaneView';
-import { backgroundScale, trimLaneTextures } from '../rendering/TextureFactory';
+import { Renderer3D } from '../three/Renderer3D';
 import { AudioManager } from '../systems/AudioManager';
 import { selectedColors } from '../systems/Cosmetics';
 import { buildDailyLevel, todayKey } from '../systems/DailyChallenge';
@@ -67,7 +65,6 @@ export class GameplayScene extends BaseScene {
   protected input2!: RunInput;
   private effects!: RunEffects;
   private fx!: FxPool;
-  private chars!: Record<Side, Phaser.GameObjects.Graphics>;
   private colors!: Record<Side, [number, number, number]>;
   private trailCosmetic = 'sparks';
   private trailColors: [number, number, number] = [0xffffff, 0xffffff, 0xffffff];
@@ -140,29 +137,24 @@ export class GameplayScene extends BaseScene {
     const profile = GameContext.profile;
     const realTheme = this.level.theme;
     const shadowTheme = this.level.shadowTheme ?? this.level.theme;
-    trimLaneTextures(this, ['city', realTheme, shadowTheme]);
-    const scale = backgroundScale(this.k, profile.lowEnd);
+    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+    Renderer3D.show(this);
     const portalColors = selectedColors(save.cosmetics.selected, 'portal');
-    const ambient = Math.round(profile.maxParticles * 0.15);
+    this.colors = { real: selectedColors(save.cosmetics.selected, 'costume'), shadow: selectedColors(save.cosmetics.selected, 'shadowForm') };
     const laneOpts = {
       height: this.layout.laneH,
       width: this.W,
-      textureScale: scale,
       highContrast: settings.highContrast,
       reducedMotion: settings.reducedMotion,
       portalColors,
-      ambientParticles: settings.reducedMotion ? 0 : ambient,
       detail: !profile.lowEnd,
     };
     this.lanes = {
-      real: new LaneView(this, this.session, { ...laneOpts, side: 'real', theme: realTheme, top: this.layout.realTop }),
-      shadow: new LaneView(this, this.session, { ...laneOpts, side: 'shadow', theme: shadowTheme, top: this.layout.shadowTop }),
+      real: new LaneView(this, this.session, { ...laneOpts, side: 'real', theme: realTheme, top: this.layout.realTop, runnerColors: this.colors.real }),
+      shadow: new LaneView(this, this.session, { ...laneOpts, side: 'shadow', theme: shadowTheme, top: this.layout.shadowTop, runnerColors: this.colors.shadow }),
     };
-    this.colors = { real: selectedColors(save.cosmetics.selected, 'costume'), shadow: selectedColors(save.cosmetics.selected, 'shadowForm') };
     this.trailCosmetic = save.cosmetics.selected.trail;
     this.trailColors = selectedColors(save.cosmetics.selected, 'trail');
-    this.chars = { real: this.add.graphics(), shadow: this.add.graphics() };
-    for (const side of ['real', 'shadow'] as const) this.lanes[side].actors.add(this.chars[side]);
 
     const fxLayer = this.add.container(0, 0).setDepth(44);
     this.fx = new FxPool(this, fxLayer, settings.reducedMotion ? 20 : profile.maxParticles);
@@ -208,6 +200,7 @@ export class GameplayScene extends BaseScene {
 
     this.applyForm(this.session.active, false);
     this.hud.update(this.session, 0);
+    this.drawCharacters(0);
     for (const side of ['real', 'shadow'] as const) this.lanes[side].update(this.session.x, this.session.t, 0);
 
     AudioManager.playMusic(true);
@@ -218,6 +211,8 @@ export class GameplayScene extends BaseScene {
       this.game.events.off('hidden', this.onBlur);
       this.lanes.real.destroy();
       this.lanes.shadow.destroy();
+      Renderer3D.hide(this);
+      Renderer3D.clear();
     });
     this.events.on('resume', () => this.afterSettings());
     this.startIntro();
@@ -322,9 +317,14 @@ export class GameplayScene extends BaseScene {
     this.visualTime += dt;
     if (s.state === 'running' && !paused) this.phase += (s.speed * vdt) / 24;
     const scroll = s.x;
+    this.drawCharacters(vdt);
     this.lanes.real.update(scroll, s.t, vdt);
     this.lanes.shadow.update(scroll, s.t, vdt);
-    this.drawCharacters(vdt);
+    const L = this.layout;
+    Renderer3D.render([
+      { world: this.lanes.real.world, x: 0, y: L.realTop, w: this.W, h: L.laneH },
+      { world: this.lanes.shadow.world, x: 0, y: L.shadowTop, w: this.W, h: L.laneH },
+    ]);
     this.hud.update(s, dt);
     this.effects.update(vdt, this.visualTime);
     this.fx.update(vdt);
@@ -355,31 +355,25 @@ export class GameplayScene extends BaseScene {
     }
   }
 
+  /** Hands each world its runner's pose for this frame (the 3D runner animates itself). */
   private drawCharacters(dt: number): void {
     const s = this.session;
     for (const side of ['real', 'shadow'] as const) {
       const form = s.form(side);
       const lane = this.lanes[side];
-      const g = this.chars[side];
       const solid = s.isSolid(side);
-      g.clear();
       const anim = form.dead || (this.hitForm === side && s.state === 'hit') ? 'hit' : form.animation;
-      drawRunnerBack(g, {
-        side,
-        anim,
-        phase: this.phase,
-        time: this.visualTime,
-        colors: this.colors[side],
-        glow: solid ? 1 : 0,
-        cheer: s.state === 'complete',
-      });
-      g.setPosition(lane.runnerX, lane.cam.runnerY(form.h));
-      const base = lane.runnerScale;
-      const targetScale = base * (solid ? 1 : 0.9);
-      g.setScale(g.scaleX + (targetScale - g.scaleX) * Math.min(1, dt * 14 || 1));
-      const hitFlicker = anim === 'hit' && !GameContext.reducedMotion ? (Math.sin(this.visualTime * 40) > 0 ? 1 : 0.3) : 1;
-      g.setAlpha((solid ? 1 : 0.45) * hitFlicker);
-      g.setRotation(anim === 'hit' && !GameContext.reducedMotion ? Math.sin(this.visualTime * 30) * 0.15 : 0);
+      lane.setRunner(
+        {
+          anim: s.state === 'complete' ? 'idle' : anim,
+          h: (form.h * 1) / 42,
+          solid,
+          speed: (s.state === 'running' ? s.speed : 0) / 42,
+          cheer: s.state === 'complete',
+          reducedMotion: GameContext.reducedMotion,
+        },
+        form.onGround,
+      );
 
       // Cosmetic trail particles from the solid form's feet.
       if (solid && s.state === 'running' && dt > 0 && form.onGround) {
@@ -516,7 +510,7 @@ export class GameplayScene extends BaseScene {
         this.hitForm = e.form;
         AudioManager.hit();
         Haptics.play('hit');
-        if (!GameContext.reducedMotion) this.cameras.main.shake(220, 0.008);
+        this.lanes[e.form].world.bump(1);
         this.lanes[e.form].flash(0xff3048, 0.45, 450);
         const lives = s.lives;
         const more = lives > 0 && s.maxLives < 50 ? ` · ${lives} ${lives === 1 ? 'life' : 'lives'} left` : '';

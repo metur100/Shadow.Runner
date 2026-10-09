@@ -9,6 +9,7 @@ import { drawIcon } from '../ui/Icons';
 import { ProgressBar } from '../ui/ProgressBar';
 import { Tile } from '../ui/Tile';
 import { addText } from '../ui/Typography';
+import { worldSnapshot } from '../three/Portraits';
 import { COLORS } from '../utils/Constants';
 import { BaseScene } from './BaseScene';
 
@@ -52,6 +53,18 @@ export class WorldSelectScene extends BaseScene {
     const g = this.add.graphics();
     drawWorldPreview(g, world, -w / 2 + 12, -h / 2 + 12, w - 24, previewH);
     tile.add(g);
+    // Replace the flat preview with a 3D snapshot of the world (one card per frame, no freeze).
+    this.time.delayedCall(60 + world.id * 40, () => {
+      const key = worldSnapshot(this, world.theme, world.theme, w - 24, previewH, world.id * 7 + 1);
+      if (!key || !tile.active) return;
+      const img = this.add.image(-w / 2 + 12, -h / 2 + 12, key).setOrigin(0).setDisplaySize(w - 24, previewH);
+      const frame = this.add.graphics();
+      frame.lineStyle(3, world.color, 1);
+      frame.strokeRoundedRect(-w / 2 + 12, -h / 2 + 12, w - 24, previewH, 6);
+      tile.addAt(img, tile.getIndex(g) + 1);
+      tile.addAt(frame, tile.getIndex(img) + 1);
+      g.destroy();
+    });
     let y = -h / 2 + 12 + previewH + 24;
     tile.add(addText(this, -w / 2 + 20, y, `${world.id + 1}  ${world.name}`, { size: 27, weight: '700', color: COLORS.creamText, origin: [0, 0.5] }));
     y += 32;

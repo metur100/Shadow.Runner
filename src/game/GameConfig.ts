@@ -22,7 +22,8 @@ export function createGameConfig(parent: string): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
     parent,
-    backgroundColor: '#120e2a',
+    // Transparent: the 3D worlds are drawn on a WebGL canvas underneath during runs.
+    transparent: true,
     width: Math.round(width * renderScale),
     height: Math.round(height * renderScale),
     scale: {

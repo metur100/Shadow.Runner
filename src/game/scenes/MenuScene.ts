@@ -24,10 +24,12 @@ export class MenuScene extends BaseScene {
     const { W, H } = this;
     const save = GameContext.save;
     const next = LEVELS[nextLevelIndex(save)];
-    this.addTwinBackground(WORLDS[next.worldId].theme, false, H * 0.36);
+    // A tall 3D view of both worlds: the logo above, the runner below it, the menu under the seam.
+    const seam = Math.round(H * 0.44);
+    this.addTwinBackground(WORLDS[next.worldId].theme, true, seam);
 
-    const logoY = this.safeTop + Math.min(190, H * 0.15);
-    drawLogo(this, W / 2, logoY, 0.82);
+    const logoY = this.safeTop + 104;
+    drawLogo(this, W / 2, logoY, 0.64);
 
     // Stars counter.
     const stars = totalStars(save);
@@ -40,7 +42,7 @@ export class MenuScene extends BaseScene {
     const done = save.levels[next.id]?.completed;
     const playLabel = save.stats.runs === 0 ? 'Play' : done ? 'Play again' : 'Continue';
     // Centre the button block in the space below the seam (it is about 560 units tall).
-    let y = Math.max(H * 0.36 + 200, H * 0.36 + (H * 0.64 - this.safeBottom - 560) / 2 + 40);
+    let y = seam + Math.max(110, (H - seam - this.safeBottom - 560) / 2 + 74);
     new Button(this, {
       x: W / 2,
       y,

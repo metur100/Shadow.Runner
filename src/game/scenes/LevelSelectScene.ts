@@ -11,6 +11,7 @@ import { drawIcon } from '../ui/Icons';
 import { StarRating } from '../ui/StarRating';
 import { Tile } from '../ui/Tile';
 import { addText } from '../ui/Typography';
+import { worldSnapshot } from '../three/Portraits';
 import { COLORS } from '../utils/Constants';
 import { formatTime } from '../utils/MathUtils';
 import { BaseScene } from './BaseScene';
@@ -87,6 +88,13 @@ export class LevelSelectScene extends BaseScene {
     const g = this.add.graphics();
     drawLevelPreview(g, level, -w / 2 + 12, -previewH / 2, previewW, previewH);
     tile.add(g);
+    this.time.delayedCall(60 + (level.index % 5) * 40, () => {
+      const key = worldSnapshot(this, level.theme, level.shadowTheme ?? level.theme, previewW, previewH, level.index * 3 + 2);
+      if (!key || !tile.active) return;
+      const img = this.add.image(-w / 2 + 12, -previewH / 2, key).setOrigin(0).setDisplaySize(previewW, previewH);
+      tile.addAt(img, tile.getIndex(g) + 1);
+      g.destroy();
+    });
     const tx = -w / 2 + previewW + 30;
     tile.add(addText(this, tx, -h / 2 + 30, `${number}. ${level.name}`, { size: 28, weight: '700', color: unlocked ? COLORS.creamText : COLORS.muted, origin: [0, 0.5] }));
     if (unlocked) {
