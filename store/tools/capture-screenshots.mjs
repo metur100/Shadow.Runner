@@ -99,19 +99,19 @@ async function capture(browser, device) {
   };
 
   // 1. The shadow phasing through a wall the physical self cannot pass (Two Worlds).
-  await playTo(page, 1, (l) => l.obstacles.filter((o) => o.kind === 'wall' && o.h >= 200)[1].x - 40);
+  await playTo(page, 1, (l) => l.obstacles.filter((o) => o.kind === 'wall' && o.h >= 200)[1].x - 330);
   await shot('01-switch-worlds');
 
   // 2. Light pours into the shadow world – the physical self runs safely above (Lights Out).
-  await playTo(page, 2, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x + 60);
+  await playTo(page, 2, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 280);
   await shot('02-light');
 
   // 3. A lever above opened the gate below (Root Gate).
-  await playTo(page, 5, (l) => l.obstacles.filter((o) => o.kind === 'gate')[1].x - 250);
+  await playTo(page, 5, (l) => l.obstacles.filter((o) => o.kind === 'gate')[1].x - 300);
   await shot('03-cross-world');
 
   // 4. Neon City: lasers and trains.
-  await playTo(page, 10, (l) => l.obstacles.filter((o) => o.kind === 'laser')[2].x - 230);
+  await playTo(page, 10, (l) => l.obstacles.filter((o) => o.kind === 'laser')[2].x - 320);
   await shot('04-neon');
 
   // 5. The Eclipse: both worlds merge.
@@ -119,7 +119,7 @@ async function capture(browser, device) {
   await shot('05-eclipse');
 
   // 6. Sunken Temple: light beams between the pillars.
-  await playTo(page, 22, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 120);
+  await playTo(page, 22, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 300);
   await shot('06-temple');
 
   // 7. World select.

@@ -36,8 +36,6 @@ export const BODY = {
   slideHeight: 36,
 } as const;
 
-/** Where the runners stand on screen, measured from the left edge of a lane. */
-export const RUNNER_SCREEN_X = 170;
 
 export const SWITCH_COOLDOWN = 0.25;
 

@@ -32,19 +32,17 @@ const runner = (mono = false) => `
   <g transform="translate(256 250)">
     <path d="M-36 -8 L-58 -34 M14 -6 L32 -36" stroke="${mono ? '#fff' : '#5a3a2e'}" stroke-width="16" stroke-linecap="round"/>
     <ellipse cx="0" cy="-70" rx="36" ry="46" fill="${mono ? '#fff' : '#ff8a3d'}"/>
-    <path d="M-24 -164 L-74 -186 L-2 -126 Z" fill="${mono ? '#fff' : '#ff8a3d'}"/>
-    <circle cx="-74" cy="-186" r="11" fill="${mono ? '#fff' : '#ff8a3d'}"/>
-    <circle cx="10" cy="-132" r="40" fill="${mono ? '#fff' : '#ff8a3d'}"/>
-    ${mono ? '' : '<rect x="4" y="-148" width="44" height="32" rx="15" fill="#fff1d6"/><ellipse cx="18" cy="-133" rx="5" ry="8" fill="#1d1838"/><ellipse cx="36" cy="-133" rx="5" ry="8" fill="#1d1838"/>'}
+    <circle cx="10" cy="-132" r="38" fill="${mono ? '#fff' : '#e9b08a'}"/>
+    <path d="M-30 -118 L-80 -146 L-36 -158 L-70 -196 L-16 -178 L-22 -218 L12 -180 L34 -208 L40 -170 L52 -156 L22 -152 L0 -142 L-10 -112 Z" fill="${mono ? '#fff' : '#1f1a2e'}"/>
+    ${mono ? '' : '<ellipse cx="34" cy="-128" rx="5" ry="9" fill="#1d1838"/><path d="M30 -106 L42 -108" stroke="#1d1838" stroke-width="4" stroke-linecap="round"/><path d="M-8 -78 L8 -50 L-2 -52 L6 -30" stroke="#fff" stroke-width="6" fill="none" stroke-linejoin="round"/>'}
     <path d="M-24 -100 Q-80 -110 -120 -88" stroke="${mono ? '#fff' : '#2ec4b6'}" stroke-width="16" fill="none" stroke-linecap="round"/>
   </g>
   <g transform="translate(256 262) scale(1 -1)">
-    <path d="M-36 -8 L-58 -34 M14 -6 L32 -36" stroke="${mono ? '#fff' : '#2b1f5c'}" stroke-width="16" stroke-linecap="round"/>
-    <ellipse cx="0" cy="-70" rx="36" ry="46" fill="${mono ? '#fff' : '#2b1f5c'}" stroke="${mono ? '#fff' : '#9a7bff'}" stroke-width="5"/>
-    <path d="M-24 -164 L-74 -186 L-2 -126 Z" fill="${mono ? '#fff' : '#2b1f5c'}"/>
-    <circle cx="-74" cy="-186" r="11" fill="${mono ? '#fff' : '#9a7bff'}"/>
-    <circle cx="10" cy="-132" r="40" fill="${mono ? '#fff' : '#2b1f5c'}" stroke="${mono ? '#fff' : '#9a7bff'}" stroke-width="5"/>
-    ${mono ? '' : '<ellipse cx="18" cy="-133" rx="7" ry="9" fill="#9fe8ff"/><ellipse cx="36" cy="-133" rx="7" ry="9" fill="#9fe8ff"/>'}
+    <path d="M-36 -8 L-58 -34 M14 -6 L32 -36" stroke="${mono ? '#fff' : '#3b2a80'}" stroke-width="16" stroke-linecap="round"/>
+    <ellipse cx="0" cy="-70" rx="36" ry="46" fill="${mono ? '#fff' : '#3b2a80'}" stroke="${mono ? '#fff' : '#9a7bff'}" stroke-width="5"/>
+    <circle cx="10" cy="-132" r="38" fill="${mono ? '#fff' : '#4a3699'}" stroke="${mono ? '#fff' : '#9a7bff'}" stroke-width="5"/>
+    <path d="M-30 -118 L-80 -146 L-36 -158 L-70 -196 L-16 -178 L-22 -218 L12 -180 L34 -208 L40 -170 L52 -156 L22 -152 L0 -142 L-10 -112 Z" fill="${mono ? '#fff' : '#241a55'}" stroke="${mono ? '#fff' : '#9a7bff'}" stroke-width="3" stroke-linejoin="round"/>
+    ${mono ? '' : '<ellipse cx="34" cy="-128" rx="7" ry="10" fill="#9fe8ff"/>'}
   </g>`;
 /** Full-bleed square icon (stores and iOS apply their own corner mask). */
 const squareIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>${DEFS}</defs>${BACKDROP}${runner()}</svg>`;

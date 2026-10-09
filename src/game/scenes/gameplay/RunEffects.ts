@@ -91,7 +91,7 @@ export class RunEffects {
     this.scene.tweens.add({ targets: this.eclipseTint, fillAlpha: on ? 0.16 : 0, duration: 400 });
   }
 
-  update(dt: number, t: number, runSpeed: number): void {
+  update(dt: number, t: number): void {
     const { layout, width } = this.opts;
     const y = layout.dividerY;
     this.waveTime += dt;
@@ -125,8 +125,6 @@ export class RunEffects {
     for (let i = this.linkList.length - 1; i >= 0; i--) {
       const k = this.linkList[i];
       k.life -= dt;
-      k.x1 -= runSpeed * dt;
-      k.x2 -= runSpeed * dt;
       if (k.life <= 0) {
         this.linkList.splice(i, 1);
         continue;
@@ -141,13 +139,16 @@ export class RunEffects {
     if (this.chaseWall) {
       const c = this.chaseWall;
       c.clear();
-      const w = 70 + Math.sin(t * 3) * 12;
-      for (let i = 0; i < 6; i++) {
-        c.fillStyle(0x05030a, 0.75 - i * 0.12);
-        c.fillRect(0, layout.realTop, w + i * 14, layout.controlsTop - layout.realTop);
+      // The eclipse wave rolls in behind the runner: darkness rising from the bottom of both worlds.
+      const h = 70 + Math.sin(t * 3) * 12;
+      for (const bottom of [layout.dividerY - 5, layout.controlsTop]) {
+        for (let i = 0; i < 6; i++) {
+          c.fillStyle(0x05030a, 0.75 - i * 0.12);
+          c.fillRect(0, bottom - h - i * 14, width, h + i * 14);
+        }
+        c.fillStyle(0xc44dff, 0.8);
+        for (let xx = 0; xx < width; xx += 26) c.fillCircle(xx, bottom - h - 10 + Math.sin(xx * 0.1 + t * 6) * 8, 3);
       }
-      c.fillStyle(0xc44dff, 0.8);
-      for (let yy = layout.realTop; yy < layout.controlsTop; yy += 26) c.fillCircle(w + 10 + Math.sin(yy * 0.1 + t * 6) * 8, yy, 3);
     }
   }
 

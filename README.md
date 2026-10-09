@@ -218,8 +218,8 @@ src/
                                EndlessGenerator, Cosmetics, AudioManager (Web Audio synthesis)
     levels/                    LevelDefinition, Patterns (builder), LevelData (30 levels + tutorial),
                                WorldDefinitions, LevelSolver (auto-player)
-    rendering/                 LaneView, ObstacleRenderer, CharacterRenderer, TextureFactory (procedural canvas
-                               art), Themes, Layout, FxPool
+    rendering/                 LaneView, Perspective (chase camera), Scenery (streets per world), ObstacleRenderer,
+                               CharacterRenderer, TextureFactory (procedural canvas art), Themes, Layout, FxPool
     ui/                        Button, ProgressBar, StarRating, Modal, ActiveFormIndicator, Toggle, Tile,
                                FocusManager, Icons, Logo, Typography, Draw
     monetization/              integration points only (no ads, no payments)
@@ -234,9 +234,9 @@ store/                         store listings, graphics, screenshots and the too
 
 - **Simulation:** fixed 60 Hz steps. Collision queries use 256-unit spatial buckets per world, and checkpoint snapshots only copy obstacles that can change.
 - **Rendering:**
-  - Obstacle, switch and portal views are created only while on or near screen and released afterwards.
-  - Coin and crystal sprites and all particles come from pools.
-  - Static shapes are drawn once; moving parts only change transforms and alpha.
+  - Each world is seen through a chase camera behind the runner. The simulation stays one-dimensional: world x becomes depth, so every obstacle keeps its exact timing.
+  - Each lane redraws its street and the things in view (far to near) into two Graphics objects per frame; nothing is created or destroyed while running. Particles come from a pool.
+  - Roadside props are placed from their slot number, so the street is identical on every attempt and endless in endless mode. Windows and small details are skipped on weak devices.
 - **Memory:**
   - The render scale follows the device pixel ratio, capped at 2× (1.5× on weaker devices).
   - Backgrounds are procedural canvases generated per world, and only the worlds in use stay in memory.

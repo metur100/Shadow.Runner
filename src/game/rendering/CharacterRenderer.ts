@@ -19,6 +19,7 @@ export interface RunnerPose {
 }
 
 const INK = 0x1d1838;
+const SKIN = 0xe9b08a;
 
 /**
  * The runner: an original hooded character with a curled hood tip, a visor face and a long scarf.
@@ -124,45 +125,49 @@ export function drawRunner(g: Phaser.GameObjects.Graphics, pose: RunnerPose): vo
     g.strokeEllipse(lean * 14, hipY - 14, 36, 44);
   }
 
-  // Head with hood.
-  g.fillStyle(body, 1);
-  g.fillCircle(headX, headY, 19);
-  // Hood tip: a curl sweeping back – the character's signature shape.
-  g.beginPath();
-  g.moveTo(headX - 12, headY - 13);
-  g.lineTo(headX - 26, headY - 30);
-  g.lineTo(headX - 6, headY - 18);
-  g.closePath();
+  // Head: face in profile with spiky hair swept back.
+  const hairColor = shadow ? mixInk(c0, 0.6) : 0x1f1a2e;
+  g.fillStyle(shadow ? body : SKIN, 1);
+  g.fillCircle(headX, headY, 17);
+  g.fillStyle(hairColor, 1);
+  g.slice(headX, headY, 18, Math.PI * 0.95, Math.PI * 1.9, false);
   g.fillPath();
-  g.fillCircle(headX - 26, headY - 30, 5);
+  const sway = pose.anim === 'run' ? Math.sin(t * 10) * 1.5 : 0;
+  const spikes: [number, number, number, number][] = [
+    [-14, -8, -30, -12],
+    [-10, -14, -24, -28],
+    [-3, -17, -12, -34],
+    [5, -17, 4, -33],
+    [11, -12, 16, -25],
+  ];
+  for (const [bx, by, tx, ty] of spikes) g.fillTriangle(headX + bx - 5, headY + by + 4, headX + bx + 5, headY + by + 2, headX + tx + sway, headY + ty);
+  g.fillRect(headX - 18, headY - 6, 8, 12);
   if (shadow) {
     g.lineStyle(2.5, c1, 0.9);
-    g.strokeCircle(headX, headY, 19);
-    // Flickering flame tips on the hood.
+    g.strokeCircle(headX, headY, 17);
     const f = Math.sin(t * 14) * 2;
     g.fillStyle(c1, 0.8);
-    g.fillTriangle(headX - 26, headY - 34 + f, headX - 31, headY - 26, headX - 21, headY - 27);
+    g.fillTriangle(headX - 30, headY - 14 + f, headX - 24, headY - 8, headX - 22, headY - 16);
   }
-  // Visor face.
-  const faceX = headX + 3;
-  g.fillStyle(shadow ? mixInk(c0, 0.5) : c2, 1);
-  g.fillRoundedRect(faceX - 6, headY - 9, 20, 15, 7);
-  // Eyes.
+  // Eye (and an ear) facing the run.
+  const faceX = headX + 6;
+  if (!shadow) {
+    g.fillStyle(mixInk(SKIN, 0.15), 1);
+    g.fillEllipse(headX - 4, headY + 2, 6, 8);
+  }
   if (shadow) {
     g.fillStyle(c2, 0.35);
-    g.fillCircle(faceX + 2, headY - 2, 6);
-    g.fillCircle(faceX + 10, headY - 2, 6);
+    g.fillCircle(faceX + 3, headY - 2, 6);
     g.fillStyle(c2, 1);
   } else {
     g.fillStyle(INK, 1);
   }
   const blink = !shadow && Math.sin(t * 1.3) > 0.985;
-  if (blink) {
-    g.fillRect(faceX - 1, headY - 2, 6, 2);
-    g.fillRect(faceX + 7, headY - 2, 6, 2);
-  } else {
-    g.fillEllipse(faceX + 2, headY - 2, 4.5, pose.anim === 'hit' ? 2 : 6.5);
-    g.fillEllipse(faceX + 10, headY - 2, 4.5, pose.anim === 'hit' ? 2 : 6.5);
+  if (blink) g.fillRect(faceX, headY - 2, 7, 2);
+  else g.fillEllipse(faceX + 3, headY - 2, 4.5, pose.anim === 'hit' ? 2 : 7);
+  if (!shadow) {
+    g.lineStyle(2, INK, 0.7);
+    g.lineBetween(faceX + 2, headY + 8, faceX + 7, headY + 7);
   }
 
   // Front leg and arm.
@@ -191,25 +196,20 @@ function drawSlide(g: Phaser.GameObjects.Graphics, pose: RunnerPose, body: numbe
   // Torso leaning back.
   g.fillStyle(body, 1);
   g.fillEllipse(-6, -20, 42, 26);
-  // Head.
-  g.fillCircle(-18, -32, 17);
-  g.beginPath();
-  g.moveTo(-28, -42);
-  g.lineTo(-46, -48);
-  g.lineTo(-24, -32);
-  g.closePath();
+  // Head with spiky hair.
+  g.fillStyle(shadow ? body : SKIN, 1);
+  g.fillCircle(-18, -32, 15);
+  g.fillStyle(shadow ? mixInk(c0, 0.6) : 0x1f1a2e, 1);
+  g.slice(-18, -32, 16, Math.PI * 0.95, Math.PI * 1.9, false);
   g.fillPath();
-  g.fillCircle(-46, -48, 4.5);
+  for (const [tx, ty] of [[-46, -40], [-40, -54], [-28, -58]]) g.fillTriangle(-30, -36, -20, -46, tx, ty);
   if (shadow) {
     g.lineStyle(2.5, c1, 0.9);
     g.strokeEllipse(-6, -20, 42, 26);
     g.strokeCircle(-18, -32, 17);
   }
-  g.fillStyle(shadow ? mixInk(c0, 0.5) : c2, 1);
-  g.fillRoundedRect(-14, -40, 18, 13, 6);
   g.fillStyle(shadow ? c2 : INK, 1);
-  g.fillEllipse(-8, -34, 4, 5.5);
-  g.fillEllipse(-1, -34, 4, 5.5);
+  g.fillEllipse(-9, -33, 4, 6);
   // Slide sparks.
   g.fillStyle(shadow ? c1 : 0xffe08a, 0.8);
   for (let i = 0; i < 3; i++) g.fillCircle(-30 - i * 10 + Math.sin(pose.time * 20 + i) * 3, -3, 3 - i * 0.6);
@@ -276,4 +276,200 @@ function drawScarf(g: Phaser.GameObjects.Graphics, shadow: boolean, color: numbe
 function mixInk(c: number, t: number): number {
   const ch = (s: number) => Math.round(((c >> s) & 255) * (1 - t) + ((INK >> s) & 255) * t);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+/**
+ * The runner seen from behind (chase camera): spiky hair, hoodie with an emblem on the back, scarf
+ * tails, dark trousers and sneakers. The shadow form is a dark silhouette with a glowing rim and wisps.
+ * Feet at (0, 0), up is negative y; about 92 units tall.
+ */
+export function drawRunnerBack(g: Phaser.GameObjects.Graphics, pose: RunnerPose): void {
+  const shadow = pose.side === 'shadow';
+  const [c0, c1] = pose.colors;
+  const t = pose.time;
+  const ph = pose.phase;
+  const glow = pose.glow ?? 0;
+  const rim = shadow ? c1 : 0xffffff;
+  const hoodie = shadow ? mixInk(c0, 0.35) : c0;
+  const pants = shadow ? mixInk(c0, 0.6) : 0x23243a;
+  const skin = shadow ? mixInk(c0, 0.45) : 0xe9b08a;
+  const hair = shadow ? mixInk(c0, 0.7) : 0x1f1a2e;
+  const shoe = shadow ? c1 : 0xf4f1e8;
+
+  let liftL = Math.max(0, Math.sin(ph));
+  let liftR = Math.max(0, -Math.sin(ph));
+  let armL = Math.sin(ph);
+  let armR = -armL;
+  let bob = -Math.abs(Math.cos(ph)) * 3;
+  let spread = 0;
+  let tilt = 0;
+  switch (pose.anim) {
+    case 'jump':
+      liftL = 0.9;
+      liftR = 0.5;
+      armL = -1.4;
+      armR = -1.4;
+      bob = 0;
+      spread = 6;
+      break;
+    case 'fall':
+      liftL = 0.2;
+      liftR = 0.35;
+      armL = -1;
+      armR = -1;
+      bob = 0;
+      spread = 10;
+      break;
+    case 'idle':
+      liftL = liftR = 0;
+      armL = armR = 0;
+      bob = Math.sin(t * 3) * 1.5;
+      break;
+    case 'hit':
+      tilt = 0.25;
+      armL = -1.6;
+      armR = -0.8;
+      break;
+    default:
+      break;
+  }
+  if (pose.cheer) {
+    armL = armR = -2;
+  }
+  if (pose.anim === 'slide') {
+    drawSlideBack(g, pose, hoodie, pants, hair, rim, glow);
+    return;
+  }
+
+  const hipY = -40 + bob;
+  const shoulderY = -68 + bob;
+  const headY = -82 + bob;
+  const lean = tilt * 30;
+
+  if (glow > 0) {
+    g.fillStyle(rim, (shadow ? 0.18 : 0.1) * glow);
+    g.fillEllipse(lean * 0.5, -46 + bob, 56, 96);
+  }
+  // Ground contact shadow is drawn by the lane; here: legs.
+  const leg = (dx: number, lift: number) => {
+    const knee = hipY + 22 - lift * 6;
+    const foot = -lift * 22;
+    g.fillStyle(pants, 1);
+    g.fillRoundedRect(dx - 7, hipY, 14, knee - hipY + 4, 6);
+    g.fillRoundedRect(dx - 6 + spread * Math.sign(dx) * 0.3, knee, 12, Math.max(6, foot - knee), 5);
+    // Sole of the sneaker shows when the foot kicks back.
+    g.fillStyle(shoe, 1);
+    g.fillEllipse(dx + spread * Math.sign(dx) * 0.3, foot - 3, 17, lift > 0.3 ? 13 : 9);
+    g.fillStyle(shadow ? c1 : 0xe0565b, lift > 0.3 ? 1 : 0.8);
+    g.fillEllipse(dx + spread * Math.sign(dx) * 0.3, foot - 3, 12, lift > 0.3 ? 6 : 4);
+  };
+  // The lifted leg is further away: draw it first.
+  if (liftL > liftR) {
+    leg(-9 - spread, liftL);
+    leg(9 + spread, liftR);
+  } else {
+    leg(9 + spread, liftR);
+    leg(-9 - spread, liftL);
+  }
+
+  const arm = (dir: number, swing: number) => {
+    const sx = dir * 19 + lean;
+    const hx = sx + dir * (6 + Math.max(0, -swing) * 10);
+    const hy = shoulderY + 30 - swing * 14 - Math.max(0, -swing) * 8;
+    g.lineStyle(10, hoodie, 1);
+    g.lineBetween(sx, shoulderY + 4, hx, hy);
+    g.fillStyle(skin, 1);
+    g.fillCircle(hx, hy + 2, 5.5);
+  };
+  arm(-1, armL);
+  arm(1, armR);
+
+  // Torso: hoodie with the emblem.
+  g.fillStyle(hoodie, 1);
+  g.fillRoundedRect(-20 + lean, shoulderY - 2, 40, hipY - shoulderY + 10, 12);
+  g.fillStyle(shadow ? mixInk(c0, 0.55) : mixInk(c0, 0.25), 1);
+  g.fillRoundedRect(-19 + lean, hipY - 2, 38, 9, 4);
+  if (shadow) {
+    g.lineStyle(2.5, c1, 0.9);
+    g.strokeRoundedRect(-20 + lean, shoulderY - 2, 40, hipY - shoulderY + 10, 12);
+  } else {
+    // A white lightning emblem on the back.
+    g.fillStyle(0xffffff, 0.9);
+    const ex = lean;
+    const ey = shoulderY + 14;
+    g.fillTriangle(ex + 3, ey - 7, ex - 6, ey + 2, ex + 1, ey + 1);
+    g.fillTriangle(ex - 3, ey + 9, ex + 6, ey - 1, ex - 1, ey - 1);
+  }
+  // Hood bunched behind the neck.
+  g.fillStyle(shadow ? mixInk(c0, 0.5) : mixInk(c0, 0.15), 1);
+  g.fillEllipse(lean, shoulderY + 2, 30, 14);
+  // Scarf tails fluttering out to the side.
+  const flutter = Math.sin(t * 13);
+  for (let i = 1; i <= 5; i++) {
+    const sx = lean + 8 + i * 6;
+    const sy = shoulderY + 2 + i * 2 + Math.sin(t * 13 - i * 0.9) * i * 1.2 + flutter;
+    if (shadow) {
+      g.fillStyle(c1, 0.7 * (1 - i / 6));
+      g.fillCircle(sx, sy, 5 - i * 0.6);
+    } else {
+      g.fillStyle(c1, 1);
+      g.fillCircle(sx, sy, 4.5 - i * 0.5);
+    }
+  }
+
+  // Head: back of the head with spiky hair.
+  g.fillStyle(skin, 1);
+  g.fillEllipse(lean - 13, headY + 2, 6, 9);
+  g.fillEllipse(lean + 13, headY + 2, 6, 9);
+  g.fillStyle(hair, 1);
+  g.fillCircle(lean, headY, 14);
+  const spikes: [number, number, number][] = [
+    [-14, -2, -22],
+    [-9, -12, -26],
+    [-2, -16, -30],
+    [6, -14, -27],
+    [12, -6, -22],
+    [15, 2, -12],
+    [-16, 4, -10],
+  ];
+  for (const [sx, sy, len] of spikes) {
+    const ang = Math.atan2(sy, sx);
+    const tx = lean + Math.cos(ang) * Math.abs(len) * 0.9 + (pose.anim === 'run' ? Math.sin(t * 10 + sx) * 1 : 0);
+    const ty = headY + Math.sin(ang) * Math.abs(len) * 0.9;
+    g.fillTriangle(lean + sx * 0.6 - 5, headY + sy * 0.5, lean + sx * 0.6 + 5, headY + sy * 0.5, tx, ty);
+  }
+  if (shadow) {
+    g.lineStyle(2.5, c1, 0.9);
+    g.strokeCircle(lean, headY, 14);
+    g.fillStyle(c1, 0.35);
+    g.fillCircle(-10 + Math.sin(t * 7) * 3, -4, 4);
+    g.fillCircle(10 + Math.cos(t * 6) * 3, -8, 3);
+  }
+}
+
+function drawSlideBack(g: Phaser.GameObjects.Graphics, pose: RunnerPose, hoodie: number, pants: number, hair: number, rim: number, glow: number): void {
+  const shadow = pose.side === 'shadow';
+  const c1 = pose.colors[1];
+  if (glow > 0) {
+    g.fillStyle(rim, (shadow ? 0.18 : 0.1) * glow);
+    g.fillEllipse(0, -22, 76, 44);
+  }
+  // Knees forward, body low and leaning back.
+  g.fillStyle(pants, 1);
+  g.fillRoundedRect(-24, -14, 18, 14, 6);
+  g.fillRoundedRect(6, -14, 18, 14, 6);
+  g.fillStyle(hoodie, 1);
+  g.fillRoundedRect(-22, -40, 44, 30, 12);
+  g.lineStyle(9, hoodie, 1);
+  g.lineBetween(-20, -32, -36, -10);
+  g.lineBetween(20, -32, 36, -10);
+  g.fillStyle(hair, 1);
+  g.fillCircle(0, -46, 13);
+  for (const sx of [-10, -3, 4, 11]) g.fillTriangle(sx - 5, -50, sx + 5, -50, sx * 1.6, -64);
+  if (shadow) {
+    g.lineStyle(2.5, c1, 0.9);
+    g.strokeRoundedRect(-22, -40, 44, 30, 12);
+  }
+  g.fillStyle(shadow ? c1 : 0xffe08a, 0.8);
+  for (let i = 0; i < 4; i++) g.fillCircle(-30 + i * 20 + Math.sin(pose.time * 20 + i) * 3, -2, 3);
 }

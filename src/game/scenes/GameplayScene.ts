@@ -4,7 +4,7 @@ import { nextLightDistance } from '../entities/LightZone';
 import { GameContext } from '../GameContext';
 import { LEVELS } from '../levels/LevelData';
 import type { Form, LevelDefinition, Side, TutorialStep } from '../levels/LevelDefinition';
-import { drawRunner } from '../rendering/CharacterRenderer';
+import { drawRunnerBack } from '../rendering/CharacterRenderer';
 import { FxPool } from '../rendering/FxPool';
 import { gameplayLayout, type GameplayLayout } from '../rendering/Layout';
 import { LaneView } from '../rendering/LaneView';
@@ -17,7 +17,7 @@ import { RunSession, type FailReason, type SimEvent } from '../systems/RunSessio
 import { computeScore } from '../systems/ScoreSystem';
 import { Modal } from '../ui/Modal';
 import { addText } from '../ui/Typography';
-import { MAX_SIM_STEPS_PER_FRAME, RUNNER_SCREEN_X, SIM_STEP } from '../utils/Constants';
+import { MAX_SIM_STEPS_PER_FRAME, SIM_STEP } from '../utils/Constants';
 import { Haptics } from '../utils/Haptics';
 import { announce, BaseScene } from './BaseScene';
 import { GameplayHud } from './gameplay/GameplayHud';
@@ -51,11 +51,6 @@ export const FAIL_TEXT: Record<FailReason, string> = {
 
 export const formName = (side: Side): string => (side === 'real' ? 'Physical form' : 'Shadow form');
 
-interface Afterimage {
-  h: number;
-  age: number;
-}
-
 /**
  * The run: two lanes (reality above, shadow below) scrolling in sync, the two forms, the HUD and the
  * controls. The simulation (RunSession) advances in fixed 60 Hz steps; this scene feeds it input,
@@ -73,8 +68,6 @@ export class GameplayScene extends BaseScene {
   private effects!: RunEffects;
   private fx!: FxPool;
   private chars!: Record<Side, Phaser.GameObjects.Graphics>;
-  private trails!: Record<Side, Phaser.GameObjects.Graphics>;
-  private afterimages: Record<Side, Afterimage[]> = { real: [], shadow: [] };
   private colors!: Record<Side, [number, number, number]>;
   private trailCosmetic = 'sparks';
   private trailColors: [number, number, number] = [0xffffff, 0xffffff, 0xffffff];
@@ -82,7 +75,6 @@ export class GameplayScene extends BaseScene {
   private phase = 0;
   private lastStride = 0;
   private trailTimer = 0;
-  private afterTimer = 0;
   private warnTimer = 0;
   private visualTime = 0;
   /** Frozen before the start countdown, while paused and during tutorial prompts. */
@@ -115,7 +107,6 @@ export class GameplayScene extends BaseScene {
     this.tipIndex = 0;
     this.lastTrigger = null;
     this.hitForm = null;
-    this.afterimages = { real: [], shadow: [] };
     this.visualTime = 0;
     this.held = false;
   }
@@ -161,6 +152,7 @@ export class GameplayScene extends BaseScene {
       reducedMotion: settings.reducedMotion,
       portalColors,
       ambientParticles: settings.reducedMotion ? 0 : ambient,
+      detail: !profile.lowEnd,
     };
     this.lanes = {
       real: new LaneView(this, this.session, { ...laneOpts, side: 'real', theme: realTheme, top: this.layout.realTop }),
@@ -169,11 +161,8 @@ export class GameplayScene extends BaseScene {
     this.colors = { real: selectedColors(save.cosmetics.selected, 'costume'), shadow: selectedColors(save.cosmetics.selected, 'shadowForm') };
     this.trailCosmetic = save.cosmetics.selected.trail;
     this.trailColors = selectedColors(save.cosmetics.selected, 'trail');
-    this.trails = { real: this.add.graphics(), shadow: this.add.graphics() };
     this.chars = { real: this.add.graphics(), shadow: this.add.graphics() };
-    for (const side of ['real', 'shadow'] as const) {
-      this.lanes[side].actors.add([this.trails[side], this.chars[side]]);
-    }
+    for (const side of ['real', 'shadow'] as const) this.lanes[side].actors.add(this.chars[side]);
 
     const fxLayer = this.add.container(0, 0).setDepth(44);
     this.fx = new FxPool(this, fxLayer, settings.reducedMotion ? 20 : profile.maxParticles);
@@ -280,8 +269,8 @@ export class GameplayScene extends BaseScene {
     if (!this.allowAction('tap')) return;
     const form = this.session.activeForm;
     const lane = this.lanes[form.side];
-    const cy = lane.screenY(form.h + 40);
-    if (Math.abs(x - RUNNER_SCREEN_X) < 60 && Math.abs(y - cy) < 70 && this.session.interact()) {
+    const cy = lane.screenY(form.h + 50);
+    if (Math.abs(x - lane.runnerX) < 70 && Math.abs(y - cy) < 90 && this.session.interact()) {
       this.processEvents();
       return;
     }
@@ -337,7 +326,7 @@ export class GameplayScene extends BaseScene {
     this.lanes.shadow.update(scroll, s.t, vdt);
     this.drawCharacters(vdt);
     this.hud.update(s, dt);
-    this.effects.update(vdt, this.visualTime, s.state === 'running' ? s.speed : 0);
+    this.effects.update(vdt, this.visualTime);
     this.fx.update(vdt);
 
     // Footsteps of the active form.
@@ -368,9 +357,6 @@ export class GameplayScene extends BaseScene {
 
   private drawCharacters(dt: number): void {
     const s = this.session;
-    this.afterTimer -= dt;
-    const sampleAfter = this.afterTimer <= 0;
-    if (sampleAfter) this.afterTimer = 0.045;
     for (const side of ['real', 'shadow'] as const) {
       const form = s.form(side);
       const lane = this.lanes[side];
@@ -378,7 +364,7 @@ export class GameplayScene extends BaseScene {
       const solid = s.isSolid(side);
       g.clear();
       const anim = form.dead || (this.hitForm === side && s.state === 'hit') ? 'hit' : form.animation;
-      drawRunner(g, {
+      drawRunnerBack(g, {
         side,
         anim,
         phase: this.phase,
@@ -387,34 +373,13 @@ export class GameplayScene extends BaseScene {
         glow: solid ? 1 : 0,
         cheer: s.state === 'complete',
       });
-      g.setPosition(RUNNER_SCREEN_X, lane.groundY - form.h);
-      const targetScale = solid ? 1 : 0.88;
-      g.setScale(g.scaleX + (targetScale - g.scaleX) * Math.min(1, dt * 14));
+      g.setPosition(lane.runnerX, lane.cam.runnerY(form.h));
+      const base = lane.runnerScale;
+      const targetScale = base * (solid ? 1 : 0.9);
+      g.setScale(g.scaleX + (targetScale - g.scaleX) * Math.min(1, dt * 14 || 1));
       const hitFlicker = anim === 'hit' && !GameContext.reducedMotion ? (Math.sin(this.visualTime * 40) > 0 ? 1 : 0.3) : 1;
       g.setAlpha((solid ? 1 : 0.45) * hitFlicker);
       g.setRotation(anim === 'hit' && !GameContext.reducedMotion ? Math.sin(this.visualTime * 30) * 0.15 : 0);
-
-      // Afterimages: the ghost trail of the solid form.
-      const list = this.afterimages[side];
-      for (const a of list) a.age += dt;
-      if (sampleAfter && solid && s.state === 'running' && dt > 0) {
-        list.unshift({ h: form.h, age: 0 });
-        if (list.length > 6) list.pop();
-      }
-      const tg = this.trails[side];
-      tg.clear();
-      if (!GameContext.reducedMotion) {
-        const color = this.colors[side][1];
-        list.forEach((a, i) => {
-          if (a.age > 0.3) return;
-          const x = RUNNER_SCREEN_X - 6 - s.speed * a.age * 0.55;
-          const y = lane.groundY - a.h;
-          const alpha = 0.22 * (1 - i / list.length);
-          tg.fillStyle(color, alpha);
-          tg.fillEllipse(x, y - 34, 30, 48);
-          tg.fillCircle(x + 4, y - 68, 16);
-        });
-      }
 
       // Cosmetic trail particles from the solid form's feet.
       if (solid && s.state === 'running' && dt > 0 && form.onGround) {
@@ -429,26 +394,27 @@ export class GameplayScene extends BaseScene {
 
   private emitTrail(lane: LaneView, h: number): void {
     if (GameContext.reducedMotion) return;
-    const x = RUNNER_SCREEN_X - 14;
+    const x = lane.runnerX + (Math.random() - 0.5) * 30;
     const y = lane.screenY(h) - 6;
     const [c0, c1] = this.trailColors;
-    const drift = -this.session.speed * 0.6;
+    // "Behind" the runner is towards the camera: particles fall back and down the screen.
+    const drift = (Math.random() - 0.5) * 60;
     switch (this.trailCosmetic) {
       case 'ribbon':
-        this.fx.burst(x, y - 30, { count: 1, color: c0, speed: 10, life: 0.4, scale: 0.55, drift });
-        this.fx.burst(x, y - 40, { count: 1, color: c1, speed: 10, life: 0.4, scale: 0.45, drift });
+        this.fx.burst(x, y, { count: 1, color: c0, speed: 10, life: 0.4, scale: 0.55, drift, angle: Math.PI / 2, spread: 1.4 });
+        this.fx.burst(x, y, { count: 1, color: c1, speed: 10, life: 0.4, scale: 0.45, drift, angle: Math.PI / 2, spread: 1.4 });
         break;
       case 'stars':
-        this.fx.burst(x, y - 20, { count: 1, color: Math.random() > 0.5 ? c0 : c1, texture: 'spark', speed: 40, life: 0.6, scale: 0.45, drift });
+        this.fx.burst(x, y, { count: 1, color: Math.random() > 0.5 ? c0 : c1, texture: 'spark', speed: 40, life: 0.6, scale: 0.45, drift, angle: Math.PI / 2, spread: 1.4 });
         break;
       case 'petals':
-        this.fx.burst(x, y - 30, { count: 1, color: c0, speed: 60, life: 0.8, scale: 0.4, drift, gravity: 160, additive: false });
+        this.fx.burst(x, y, { count: 1, color: c0, speed: 60, life: 0.8, scale: 0.4, drift, angle: Math.PI / 2, spread: 1.4, gravity: 160, additive: false });
         break;
       case 'pixels':
-        this.fx.burst(x, y - 10, { count: 2, color: Math.random() > 0.5 ? c0 : c1, speed: 50, life: 0.35, scale: 0.25, drift });
+        this.fx.burst(x, y, { count: 2, color: Math.random() > 0.5 ? c0 : c1, speed: 50, life: 0.35, scale: 0.25, drift, angle: Math.PI / 2, spread: 1.4 });
         break;
       default:
-        this.fx.burst(x, y, { count: 1, color: c0, speed: 60, life: 0.3, scale: 0.35, drift, angle: -Math.PI * 0.75, spread: 1 });
+        this.fx.burst(x, y, { count: 1, color: c0, speed: 90, life: 0.3, scale: 0.35, drift, angle: Math.PI / 2, spread: 1.2 });
     }
   }
 
@@ -461,7 +427,6 @@ export class GameplayScene extends BaseScene {
 
   private handle(e: SimEvent): void {
     const s = this.session;
-    const scroll = s.x;
     switch (e.type) {
       case 'switch': {
         this.applyForm(e.to, true);
@@ -469,7 +434,7 @@ export class GameplayScene extends BaseScene {
         Haptics.play('switch');
         const from = this.lanes[e.to === 'real' ? 'shadow' : 'real'];
         const to = this.lanes[e.to];
-        this.effects.switched(e.to, RUNNER_SCREEN_X, from.screenY(s.form(from.side).h + 40), to.screenY(s.form(e.to).h + 40));
+        this.effects.switched(e.to, to.runnerX, from.screenY(s.form(from.side).h + 50), to.screenY(s.form(e.to).h + 50));
         if (!GameContext.reducedMotion) to.flash(e.to === 'real' ? 0xfff1d6 : 0x9a7bff, 0.25, 200);
         if (e.forced) this.hud.toast(e.to === 'real' ? 'The portal pulls you into reality!' : 'The portal pulls you into the shadows!', 0x9fe8ff);
         announce(e.to === 'real' ? 'Physical form' : 'Shadow form');
@@ -492,8 +457,7 @@ export class GameplayScene extends BaseScene {
       case 'collect': {
         const item = s.collectibles[e.index];
         const lane = this.lanes[e.side];
-        const x = lane.screenX(item.x, scroll);
-        const y = lane.screenY(item.y);
+        const { x, y } = lane.project(item.x, item.y);
         if (e.kind === 'coin') AudioManager.coin();
         else if (e.kind === 'crystal') AudioManager.crystal();
         else {
@@ -510,7 +474,8 @@ export class GameplayScene extends BaseScene {
         const lane = this.lanes[e.side];
         AudioManager.lever();
         Haptics.play('tap');
-        this.lastTrigger = { x: lane.screenX(sw.x, scroll), y: lane.screenY(60), color: e.side === 'real' ? 0xffc96b : 0x9a7bff };
+        const at = lane.project(sw.x, 60);
+        this.lastTrigger = { x: at.x + 120, y: at.y, color: e.side === 'real' ? 0xffc96b : 0x9a7bff };
         const text = s.interactions.describe(sw.id)[0];
         if (text) this.hud.toast(text, 0xfff1d6, 2400);
         break;
@@ -519,7 +484,8 @@ export class GameplayScene extends BaseScene {
         const o = s.obstacles[e.target];
         const lane = this.lanes[o.side];
         if (this.lastTrigger) {
-          this.effects.link(this.lastTrigger.x, this.lastTrigger.y, lane.screenX(o.x + o.w / 2, scroll), lane.screenY(60), this.lastTrigger.color);
+          const to = lane.project(o.x, 100);
+          this.effects.link(this.lastTrigger.x, this.lastTrigger.y, to.x, to.y, this.lastTrigger.color);
         }
         break;
       }
@@ -536,7 +502,7 @@ export class GameplayScene extends BaseScene {
       case 'nearMiss': {
         AudioManager.nearMiss();
         const lane = this.lanes[e.form];
-        const txt = addText(this, RUNNER_SCREEN_X + 60, lane.screenY(s.form(e.form).h + 110), 'Close!', {
+        const txt = addText(this, lane.runnerX + 110, lane.screenY(s.form(e.form).h + 90), 'Close!', {
           size: 26,
           weight: '700',
           color: '#ffffff',
@@ -563,7 +529,6 @@ export class GameplayScene extends BaseScene {
         this.lanes.real.rewind();
         this.lanes.shadow.rewind();
         this.fx.clear();
-        this.afterimages = { real: [], shadow: [] };
         this.applyForm(s.active, false);
         this.hud.toast(s.checkpointIndex >= 0 ? 'Back to the checkpoint' : 'Back to the start', 0x9fe8ff, 1100);
         this.afterRespawn();
@@ -595,7 +560,7 @@ export class GameplayScene extends BaseScene {
   private dust(side: Side, color: number): void {
     const lane = this.lanes[side];
     if (!this.session.isSolid(side)) return;
-    this.fx.burst(RUNNER_SCREEN_X, lane.screenY(this.session.form(side).h), { count: 4, color, speed: 90, life: 0.3, scale: 0.35, angle: -Math.PI / 2, spread: 2.4, drift: -this.session.speed * 0.5 });
+    this.fx.burst(lane.runnerX, lane.screenY(this.session.form(side).h), { count: 6, color, speed: 120, life: 0.3, scale: 0.4, angle: -Math.PI / 2, spread: 3 });
   }
 
   protected applyForm(form: Form, animate: boolean): void {
@@ -635,8 +600,8 @@ export class GameplayScene extends BaseScene {
     Haptics.play('success');
     this.lanes.real.flash(0xffffff, 0.5, 600);
     this.lanes.shadow.flash(0xffffff, 0.5, 600);
-    this.fx.burst(RUNNER_SCREEN_X, this.lanes.real.screenY(60), { count: 24, color: 0xffd36b, texture: 'spark', speed: 300, life: 0.8, scale: 0.6 });
-    this.fx.burst(RUNNER_SCREEN_X, this.lanes.shadow.screenY(60), { count: 24, color: 0x9fe8ff, texture: 'spark', speed: 300, life: 0.8, scale: 0.6 });
+    this.fx.burst(this.lanes.real.runnerX, this.lanes.real.screenY(60), { count: 24, color: 0xffd36b, texture: 'spark', speed: 300, life: 0.8, scale: 0.6 });
+    this.fx.burst(this.lanes.shadow.runnerX, this.lanes.shadow.screenY(60), { count: 24, color: 0x9fe8ff, texture: 'spark', speed: 300, life: 0.8, scale: 0.6 });
     this.time.delayedCall(1300, () => this.finish());
   }
 

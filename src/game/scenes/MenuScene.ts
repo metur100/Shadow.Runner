@@ -24,7 +24,7 @@ export class MenuScene extends BaseScene {
     const { W, H } = this;
     const save = GameContext.save;
     const next = LEVELS[nextLevelIndex(save)];
-    this.addTwinBackground(WORLDS[next.worldId].theme, true, H * 0.36);
+    this.addTwinBackground(WORLDS[next.worldId].theme, false, H * 0.36);
 
     const logoY = this.safeTop + Math.min(190, H * 0.15);
     drawLogo(this, W / 2, logoY, 0.82);

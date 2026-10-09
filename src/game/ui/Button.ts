@@ -7,7 +7,7 @@ import type { Focusable, FocusManager } from './FocusManager';
 import { drawIcon, type IconName } from './Icons';
 import { addText } from './Typography';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'hud';
 
 export interface ButtonOptions {
   x: number;
@@ -27,12 +27,14 @@ export interface ButtonOptions {
   radius?: number;
 }
 
-const STYLES: Record<ButtonVariant, { fill: number; shadow: number; text: string; icon: number; border?: number }> = {
+const STYLES: Record<ButtonVariant, { fill: number; shadow: number; text: string; icon: number; border?: number; flat?: boolean; fillAlpha?: number }> = {
   primary: { fill: COLORS.accent, shadow: COLORS.accentDark, text: '#ffffff', icon: 0xffffff },
   success: { fill: 0x3bb273, shadow: 0x2a8a57, text: '#ffffff', icon: 0xffffff },
   secondary: { fill: 0xffffff, shadow: 0xc9d2e0, text: COLORS.inkText, icon: COLORS.ink },
   ghost: { fill: 0xffffff, shadow: 0xffffff, text: COLORS.inkText, icon: COLORS.ink, border: 0xd5dcea },
   danger: { fill: COLORS.bad, shadow: 0xa83a3f, text: '#ffffff', icon: 0xffffff },
+  // Translucent dark glass over gameplay.
+  hud: { fill: 0x0d0a24, shadow: 0x0d0a24, text: '#ffffff', icon: 0xffffff, border: 0xffffff, flat: true, fillAlpha: 0.55 },
 };
 
 /** Large, touch-friendly button with press animation, sound, haptics and keyboard focus. */
@@ -174,19 +176,19 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
     const g = this.bg;
     g.clear();
     const alpha = this.disabled ? 0.55 : 1;
-    if (this.variant !== 'ghost') {
+    if (this.variant !== 'ghost' && !style.flat) {
       g.fillStyle(style.shadow, alpha);
       g.fillRoundedRect(-width / 2, -height / 2 + depth, width, height, r);
     }
     const top = -height / 2 + (this.pressed ? 5 : 0);
-    g.fillStyle(style.fill, this.variant === 'ghost' ? 0.85 * alpha : alpha);
+    g.fillStyle(style.fill, (style.fillAlpha ?? (this.variant === 'ghost' ? 0.85 : 1)) * alpha);
     g.fillRoundedRect(-width / 2, top, width, height, r);
     if (style.border) {
       g.lineStyle(3, style.border, alpha);
       g.strokeRoundedRect(-width / 2, top, width, height, r);
     }
     // Soft top highlight.
-    g.fillStyle(0xffffff, this.variant === 'secondary' || this.variant === 'ghost' ? 0 : 0.16 * alpha);
+    g.fillStyle(0xffffff, this.variant === 'secondary' || this.variant === 'ghost' || style.flat ? 0 : 0.16 * alpha);
     g.fillRoundedRect(-width / 2 + 6, top + 4, width - 12, height * 0.38, Math.max(4, r - 6));
 
     // Icon + label are centred together as one group.
