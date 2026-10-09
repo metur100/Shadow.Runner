@@ -4,6 +4,7 @@ import { GameContext } from '../GameContext';
 import { solveLevel } from '../levels/LevelSolver';
 import type { BaseScene } from '../scenes/BaseScene';
 import type { GameplayScene } from '../scenes/GameplayScene';
+import { runnerPortrait } from '../three/Portraits';
 import { SIM_STEP } from './Constants';
 
 interface ButtonInfo {
@@ -142,6 +143,14 @@ export function installTestHooks(game: Phaser.Game): void {
     hold: (on: boolean) => run()?.hold(on),
     save: () => GameContext.save,
     profile: () => GameContext.profile,
+    /** A 3D portrait of the runner as a PNG data URL (store icon / graphics tooling). */
+    portrait: (side: 'real' | 'shadow', colors: [number, number, number], pose: 'idle' | 'run' | 'wave' | 'hit', time: number, w: number, h: number): string | null => {
+      const scene = game.scene.getScenes(true)[0];
+      if (!scene) return null;
+      const key = runnerPortrait(scene, side, colors, pose, time, w, h);
+      if (!key) return null;
+      return (scene.textures.get(key).getSourceImage() as HTMLCanvasElement).toDataURL('image/png');
+    },
   };
   (window as unknown as { __SR__: typeof hooks }).__SR__ = hooks;
 }

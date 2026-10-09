@@ -99,15 +99,15 @@ async function capture(browser, device) {
   };
 
   // 1. The shadow phasing through a wall the physical self cannot pass (Two Worlds).
-  await playTo(page, 1, (l) => l.obstacles.filter((o) => o.kind === 'wall' && o.h >= 200)[1].x - 330);
+  await playTo(page, 1, (l) => l.obstacles.filter((o) => o.kind === 'wall' && o.h >= 200)[1].x - 70);
   await shot('01-switch-worlds');
 
   // 2. Light pours into the shadow world – the physical self runs safely above (Lights Out).
-  await playTo(page, 2, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 280);
+  await playTo(page, 2, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 230);
   await shot('02-light');
 
   // 3. A lever above opened the gate below (Root Gate).
-  await playTo(page, 5, (l) => l.obstacles.filter((o) => o.kind === 'gate')[1].x - 300);
+  await playTo(page, 5, (l) => l.obstacles.filter((o) => o.kind === 'gate')[1].x - 470);
   await shot('03-cross-world');
 
   // 4. Neon City: lasers and trains.
@@ -119,7 +119,7 @@ async function capture(browser, device) {
   await shot('05-eclipse');
 
   // 6. Sunken Temple: light beams between the pillars.
-  await playTo(page, 22, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 300);
+  await playTo(page, 22, (l) => l.obstacles.filter((o) => o.kind === 'lightZone')[1].x - 420);
   await shot('06-temple');
 
   // 7. World select.
@@ -138,7 +138,8 @@ async function capture(browser, device) {
   if (errors.length) throw new Error(`${device.key}: ${errors.join('; ')}`);
 }
 
-const browser = await chromium.launch({ channel: 'msedge', headless: true });
+// GPU rendering for the 3D worlds (ANGLE on Direct3D 11 on Windows).
+const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] });
 try {
   for (const device of DEVICES) {
     if (only && device.key !== only) continue;

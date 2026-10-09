@@ -26,7 +26,7 @@ Play two versions of yourself at once: your shadow runs through walls, light des
 ```
 Two worlds. One runner.
 
-Shadow Runner is a fast, clever runner where you play two versions of the same character at the same time. Your physical self races through a bright, colourful city at the top of the screen – and your shadow runs through a dark, glowing shadow world below. One tap swaps which of you is real.
+Shadow Runner is a fast, clever 3D runner where you play two versions of the same character at the same time. Your physical self races through a bright, colourful city at the top of the screen – and your shadow runs through a dark, glowing shadow world below. One tap swaps which of you is real.
 
 Walls stop your physical self, but your shadow phases straight through them. Bright light destroys your shadow, but your physical self runs safely beneath it. Read what is coming in both worlds, switch at the right moment and keep running.
 

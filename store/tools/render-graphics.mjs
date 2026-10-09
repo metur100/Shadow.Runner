@@ -44,13 +44,45 @@ const runner = (mono = false) => `
     <path d="M-30 -118 L-80 -146 L-36 -158 L-70 -196 L-16 -178 L-22 -218 L12 -180 L34 -208 L40 -170 L52 -156 L22 -152 L0 -142 L-10 -112 Z" fill="${mono ? '#fff' : '#241a55'}" stroke="${mono ? '#fff' : '#9a7bff'}" stroke-width="3" stroke-linejoin="round"/>
     ${mono ? '' : '<ellipse cx="34" cy="-128" rx="7" ry="10" fill="#9fe8ff"/>'}
   </g>`;
+/**
+ * The runner from the 3D game (store/tools/render-portraits.mjs): the physical form above the seam
+ * (head to knees) and the shadow form mirrored below it with a violet glow.
+ */
+const PORTRAIT_REAL = path.join(ROOT, 'store/graphics/src/runner-real.png');
+const PORTRAIT_SHADOW = path.join(ROOT, 'store/graphics/src/runner-shadow.png');
+const has3d = fs.existsSync(PORTRAIT_REAL) && fs.existsSync(PORTRAIT_SHADOW);
+const portraitRunner = (mono = false) => {
+  const real = png(PORTRAIT_REAL);
+  const shade = png(PORTRAIT_SHADOW);
+  const h = 450;
+  const w = h * 0.8;
+  const x = 256 - w / 2 + 6;
+  const y = 6;
+  const filterReal = mono ? 'url(#mono)' : 'url(#lift)';
+  const filterShade = mono ? 'url(#mono)' : 'url(#violet)';
+  return `
+  <defs>
+    <clipPath id="top"><rect width="512" height="250"/></clipPath>
+    <clipPath id="bottom"><rect y="262" width="512" height="250"/></clipPath>
+    <filter id="mono"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"/></filter>
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1d1838" flood-opacity="0.45"/></filter>
+    <filter id="violet" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#9a7bff" flood-opacity="0.95"/></filter>
+  </defs>
+  <g clip-path="url(#top)"><image href="${real}" x="${x}" y="${y}" width="${w}" height="${h}" filter="${filterReal}"/></g>
+  <g clip-path="url(#bottom)"><g transform="translate(0 512) scale(1 -1)"><image href="${shade}" x="${x}" y="${y}" width="${w}" height="${h}" filter="${filterShade}" opacity="${mono ? 1 : 0.95}"/></g></g>`;
+};
+const ICON_GLOW = `<radialGradient id="sunglow" cx="0.72" cy="0.18" r="0.5"><stop offset="0" stop-color="#fff6d8" stop-opacity="0.95"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="moonglow" cx="0.5" cy="0.62" r="0.5"><stop offset="0" stop-color="#9a7bff" stop-opacity="0.55"/><stop offset="1" stop-color="#9a7bff" stop-opacity="0"/></radialGradient>`;
+const ICON_BACK = `${BACKDROP}<rect width="512" height="256" fill="url(#sunglow)"/><rect y="256" width="512" height="256" fill="url(#moonglow)"/>`;
+const figure = (mono = false) => (has3d ? portraitRunner(mono) : runner(mono));
+
 /** Full-bleed square icon (stores and iOS apply their own corner mask). */
-const squareIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>${DEFS}</defs>${BACKDROP}${runner()}</svg>`;
-const roundedIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>${DEFS}<clipPath id="r"><rect width="512" height="512" rx="112"/></clipPath></defs><g clip-path="url(#r)">${BACKDROP}${runner()}</g></svg>`;
+const squareIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>${DEFS}${ICON_GLOW}</defs>${ICON_BACK}${figure()}</svg>`;
+const roundedIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>${DEFS}${ICON_GLOW}<clipPath id="r"><rect width="512" height="512" rx="112"/></clipPath></defs><g clip-path="url(#r)">${ICON_BACK}${figure()}</g></svg>`;
 /** Android adaptive icon layers: characters kept inside the 66 % safe zone. */
 const adaptiveView = 'viewBox="-110 -110 732 732"';
-const adaptiveForeground = `<svg xmlns="http://www.w3.org/2000/svg" ${adaptiveView}>${runner()}</svg>`;
-const adaptiveMonochrome = `<svg xmlns="http://www.w3.org/2000/svg" ${adaptiveView}>${runner(true)}</svg>`;
+const adaptiveForeground = `<svg xmlns="http://www.w3.org/2000/svg" ${adaptiveView}>${figure()}</svg>`;
+const adaptiveMonochrome = `<svg xmlns="http://www.w3.org/2000/svg" ${adaptiveView}>${figure(true)}</svg>`;
 const adaptiveBackground = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>${DEFS}</defs>${BACKDROP}</svg>`;
 
 const svgPage = (svg, bg = 'transparent') => `<style>${FONTS} body{background:${bg}} svg{display:block;width:100%;height:100%}</style>${svg}`;
@@ -97,8 +129,8 @@ function featureGraphic() {
     body { width:1024px; height:500px; ${BG} position:relative; color:#fff8ec; }
     .seam { position:absolute; left:0; right:0; top:246px; height:8px; background:#fff; box-shadow: 0 0 24px 8px rgba(159,232,255,0.7); }
     .icon { position:absolute; left:64px; top:54px; width:132px; height:132px; filter: drop-shadow(0 10px 20px rgba(20,10,40,0.4)); }
-    h1 { position:absolute; left:64px; top:200px; font-size:80px; font-weight:700; line-height:0.92; text-shadow: 0 4px 0 rgba(29,24,56,0.4); }
-    h1 span { color:#ff9f5b; display:block; }
+    h1 { position:absolute; left:60px; top:196px; font-size:84px; font-weight:700; font-style:italic; line-height:0.92; letter-spacing:1px; color:#fff; -webkit-text-stroke: 3px #0b0822; paint-order: stroke fill; text-shadow: 0 5px 0 rgba(11,8,34,0.55); }
+    h1 span { display:block; margin-left:26px; background: linear-gradient(180deg, #9fc2ff, #4f7dff 50%, #3a4fe0); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-stroke: 0; filter: drop-shadow(0 4px 0 rgba(11,8,34,0.6)); }
     p { position:absolute; left:68px; top:400px; font-size:26px; font-weight:600; opacity:0.92; }
     .phone { position:absolute; width:206px; height:366px; border-radius:30px; border:7px solid #fff8ec; overflow:hidden;
       box-shadow: 0 18px 40px rgba(5,3,15,0.5); background-size:cover; background-position:center top; }
@@ -107,8 +139,8 @@ function featureGraphic() {
   </style>
   <div class="seam"></div>
   <div class="icon">${roundedIcon}</div>
-  <h1>Shadow<span>Runner</span></h1>
-  <p>Two worlds. One runner.</p>
+  <h1>SHADOW<span>RUNNER</span></h1>
+  <p>Switch realities. Master both worlds.</p>
   <div class="phone a"></div><div class="phone b"></div>`;
 }
 
@@ -135,14 +167,14 @@ function headerImage(W, H) {
     .text { position:absolute; left:${Math.round(W * 0.08)}px; top:50%; transform:translateY(-50%); }
     .icon { width:${Math.round(H * 0.2)}px; height:${Math.round(H * 0.2)}px; margin-bottom:${Math.round(H * 0.04)}px; filter: drop-shadow(0 ${H * 0.02}px ${H * 0.04}px rgba(5,3,15,0.4)); }
     .icon svg { width:100%; height:100%; display:block; }
-    h1 { font-size:${title}px; font-weight:700; line-height:0.95; text-shadow: 0 ${H * 0.006}px 0 rgba(29,24,56,0.4); }
-    h1 span { color:#ff9f5b; display:block; }
+    h1 { font-size:${title}px; font-weight:700; font-style:italic; line-height:0.95; color:#fff; -webkit-text-stroke: ${Math.round(title * 0.035)}px #0b0822; paint-order: stroke fill; text-shadow: 0 ${H * 0.006}px 0 rgba(11,8,34,0.5); }
+    h1 span { display:block; margin-left:${Math.round(title * 0.3)}px; background: linear-gradient(180deg, #9fc2ff, #4f7dff 50%, #3a4fe0); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-stroke: 0; filter: drop-shadow(0 ${Math.round(H * 0.005)}px 0 rgba(11,8,34,0.6)); }
     p { margin-top:${Math.round(H * 0.045)}px; font-size:${Math.round(title * 0.3)}px; font-weight:600; opacity:0.9; }
     .phone { position:absolute; width:${pw}px; height:${ph}px; border-radius:${Math.round(pw * 0.13)}px; border:${Math.max(4, Math.round(pw * 0.035))}px solid #fff8ec;
       background-size:cover; background-position:center top; box-shadow: 0 ${H * 0.03}px ${H * 0.07}px rgba(5,3,15,0.5); }
   </style>
   <div class="seam"></div>
-  <div class="text"><div class="icon">${roundedIcon}</div><h1>Shadow<span>Runner</span></h1><p>Two worlds. One runner.</p></div>
+  <div class="text"><div class="icon">${roundedIcon}</div><h1>SHADOW<span>RUNNER</span></h1><p>Switch realities. Master both worlds.</p></div>
   ${phones}`;
 }
 

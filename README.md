@@ -6,7 +6,7 @@ A mobile-first runner and puzzle game about **two worlds at once**. Your physica
 - Light destroys the shadow, but your physical self runs safely beneath it.
 - What you do in one world changes the other.
 
-Made by **Medin Turkes**. Built with TypeScript, Vite and Phaser 3. There is no backend, no account and no network access during play; all graphics and sounds are generated in code.
+Made by **Medin Turkes**. Built with TypeScript, Vite, three.js (3D worlds) and Phaser 3 (HUD and menus). There is no backend, no account and no network access during play; the 3D models are bundled and the sounds are generated in code.
 
 ---
 
@@ -218,8 +218,12 @@ src/
                                EndlessGenerator, Cosmetics, AudioManager (Web Audio synthesis)
     levels/                    LevelDefinition, Patterns (builder), LevelData (30 levels + tutorial),
                                WorldDefinitions, LevelSolver (auto-player)
-    rendering/                 LaneView, Perspective (chase camera), Scenery (streets per world), ObstacleRenderer,
-                               CharacterRenderer, TextureFactory (procedural canvas art), Themes, Layout, FxPool
+    three/                     the 3D worlds: Renderer3D (WebGL canvas under Phaser), World3D (scene, chase camera,
+                               lights), Street (road, buildings, props), LevelObjects (obstacles, items, portals),
+                               Runner3D (animated character), Sky, Environment (6 worlds × 2 sides), Materials,
+                               Textures (procedural canvas textures), Models (glTF loading), Portraits
+    rendering/                 LaneView (3D world + 2D overlays per lane), TextureFactory, Themes, Layout, FxPool
+  assets/models/               CC0 glTF models (Quaternius), compressed by scripts/optimize-models.mjs
     ui/                        Button, ProgressBar, StarRating, Modal, ActiveFormIndicator, Toggle, Tile,
                                FocusManager, Icons, Logo, Typography, Draw
     monetization/              integration points only (no ads, no payments)
@@ -234,12 +238,13 @@ store/                         store listings, graphics, screenshots and the too
 
 - **Simulation:** fixed 60 Hz steps. Collision queries use 256-unit spatial buckets per world, and checkpoint snapshots only copy obstacles that can change.
 - **Rendering:**
-  - Each world is seen through a chase camera behind the runner. The simulation stays one-dimensional: world x becomes depth, so every obstacle keeps its exact timing.
-  - Each lane redraws its street and the things in view (far to near) into two Graphics objects per frame; nothing is created or destroyed while running. Particles come from a pool.
-  - Roadside props are placed from their slot number, so the street is identical on every attempt and endless in endless mode. Windows and small details are skipped on weak devices.
+  - Each world is a three.js scene seen through a chase camera behind the runner, drawn into its half of one WebGL canvas that sits under the transparent Phaser canvas (HUD, menus). The simulation stays one-dimensional: world x becomes depth, so every obstacle keeps its exact timing.
+  - Models share geometry and materials; buildings and props are pooled and placed from their slot number, so the street is identical on every attempt and endless in endless mode.
+  - The light setup of a world never changes during a run (glows are sprites, not lights), so shaders are not recompiled mid-run.
+  - Adaptive quality: when frames average over 20 ms, the render scale steps down from 2× to 1.5×, then shadows switch off and the scale drops to 1.25× and 1×. Weak devices start without shadows and antialiasing.
 - **Memory:**
   - The render scale follows the device pixel ratio, capped at 2× (1.5× on weaker devices).
-  - Backgrounds are procedural canvases generated per world, and only the worlds in use stay in memory.
+  - The 49 models are meshopt-compressed (3.1 MB in total) and textures are WebP at most 512 px; procedural textures are cached and shared.
   - The particle budget is lower on weak devices, and a frame-time governor lowers it further.
 - **Pausing:** the run pauses when the tab is hidden, the window loses focus or the app goes to the background. Listeners and textures are released when a scene shuts down.
 
@@ -370,6 +375,7 @@ The bundle ends up in `android/app/build/outputs/bundle/release/`. Before each u
 
 ## Credits
 
-- Game design, code and art: **Medin Turkes**. All graphics and sounds are generated procedurally; the characters are original.
-- Engine: [Phaser 3](https://phaser.io) (MIT).
+- Game design and code: **Medin Turkes**. Sounds are generated procedurally.
+- 3D models: [Quaternius](https://quaternius.com) (CC0) – see [`src/assets/models/CREDITS.md`](src/assets/models/CREDITS.md).
+- Engines: [three.js](https://threejs.org) (MIT) and [Phaser 3](https://phaser.io) (MIT).
 - Font: [Fredoka](https://fonts.google.com/specimen/Fredoka) via Fontsource (SIL Open Font License), bundled for offline use.

@@ -19,8 +19,8 @@ function getStage(w: number, h: number) {
   rim.position.set(-3, 2, -3);
   scene.add(key, rim);
   const camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 50);
-  camera.position.set(1.15, 1.15, 3.35);
-  camera.lookAt(0, 0.92, 0);
+  camera.position.set(1.2, 1.1, 3.6);
+  camera.lookAt(0, 0.88, 0);
   const target = new THREE.WebGLRenderTarget(w, h, { samples: 4 });
   target.texture.colorSpace = THREE.SRGBColorSpace;
   stage = { scene, camera, target, size: [w, h] };
