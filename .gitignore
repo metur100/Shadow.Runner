@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-mobile
+test-results
+*.log
+.DS_Store
+.vite
+# Capacitor native projects are generated (see README)
+/android
+/ios
+store/builds/
+# Signing secrets – never commit
+*.jks
+*.keystore
+credentials.json

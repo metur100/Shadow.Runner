@@ -1,0 +1,66 @@
+import type { ThemeId, WorldDefinition } from './LevelDefinition';
+
+export const WORLDS: WorldDefinition[] = [
+  {
+    id: 0,
+    name: 'First Light',
+    theme: 'city',
+    tagline: 'Two worlds, one runner',
+    introduces: ['Running', 'Jumping', 'Switching', 'Coins & crystals', 'Walls'],
+    color: 0xff8a3d,
+    reality: 'Colourful streets, alleys and rooftops',
+    shadow: 'The quiet shadow city beneath',
+  },
+  {
+    id: 1,
+    name: 'Parallel Park',
+    theme: 'park',
+    tagline: 'What you do above changes below',
+    introduces: ['Cross-world switches', 'Gates', 'Shadow walls', 'Moving platforms', 'Light zones'],
+    color: 0x3bb273,
+    reality: 'A sunny park',
+    shadow: 'Dark roots underground',
+  },
+  {
+    id: 2,
+    name: 'Neon City',
+    theme: 'neon',
+    tagline: 'Fast lights, faster choices',
+    introduces: ['Lasers', 'Timed doors', 'Trains', 'Speed sections', 'Moving signs'],
+    color: 0x2ec4d6,
+    reality: 'A bright neon skyline',
+    shadow: 'The neon shadow city below',
+  },
+  {
+    id: 3,
+    name: 'Clockwork District',
+    theme: 'clockwork',
+    tagline: 'Everything ticks in time',
+    introduces: ['Gears', 'Elevators', 'Pendulums', 'Timed platforms', 'Synchronised obstacles'],
+    color: 0xd9a441,
+    reality: 'A brass-and-copper machine city',
+    shadow: 'A broken clockwork dimension',
+  },
+  {
+    id: 4,
+    name: 'Sunken Temple',
+    theme: 'temple',
+    tagline: 'Old stones, deep water',
+    introduces: ['Water', 'Collapsing floors', 'Shadow bridges', 'Light beams', 'Portals', 'Keys'],
+    color: 0x2fb5a3,
+    reality: 'An ancient temple by the sea',
+    shadow: 'A dark underwater shadow world',
+  },
+  {
+    id: 5,
+    name: 'The Eclipse',
+    theme: 'eclipse',
+    tagline: 'The worlds collide',
+    introduces: ['Fast switching', 'Many lights', 'Merged worlds', 'Moving gates', 'Final escapes'],
+    color: 0xb05cff,
+    reality: 'Reality starting to fade',
+    shadow: 'Shadows rising into the light',
+  },
+];
+
+export const worldForTheme = (theme: ThemeId): WorldDefinition => WORLDS.find((w) => w.theme === theme) ?? WORLDS[0];

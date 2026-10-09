@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#120e2a" />
+    <meta name="description" content="Shadow Runner – run through two worlds at once. Switch between your physical self and your shadow to pass walls, light and traps." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <title>Shadow Runner</title>
+  </head>
+  <body>
+    <div id="game" aria-label="Shadow Runner game. Tap to switch worlds, swipe up to jump, swipe down to slide." role="application"></div>
+    <div id="sr-status" class="sr-only" aria-live="polite"></div>
+    <div id="rotate-hint" aria-hidden="true">
+      <div>Please turn your phone upright</div>
+    </div>
+    <noscript>Shadow Runner needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
