@@ -1,4 +1,4 @@
-# Shadow Runner
+# Twinshade
 
 A mobile-first runner and puzzle game about **two worlds at once**. Your physical self runs through a bright reality world in the top half of the screen, and your shadow runs through a dark shadow world in the bottom half. Tap to choose which one is real.
 

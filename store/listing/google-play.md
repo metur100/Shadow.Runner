@@ -6,7 +6,7 @@ Copy each block into Play Console. Character limits are noted; every text below 
 
 **App name** (max 30)
 ```
-Shadow Runner: Two Worlds
+Twinshade: Two Worlds Runner
 ```
 
 **Short description** (max 80)
@@ -18,7 +18,7 @@ Run through two worlds at once. Tap to swap between yourself and your shadow!
 ```
 Two worlds. One runner.
 
-Shadow Runner is a fast, clever 3D runner where you play two versions of the same character at the same time. Your physical self races through a bright, colourful city at the top of the screen – and your shadow runs through a dark, glowing shadow world below. One tap swaps which of you is real.
+Twinshade is a fast, clever 3D runner where you play two versions of the same character at the same time. Your physical self races through a bright, colourful city at the top of the screen – and your shadow runs through a dark, glowing shadow world below. One tap swaps which of you is real.
 
 Walls stop your physical self, but your shadow phases straight through them. Bright light destroys your shadow, but your physical self runs safely beneath it. Read what is coming in both worlds, switch at the right moment and keep running.
 
@@ -106,11 +106,11 @@ Why this is accurate: the game makes no network requests at all. Progress and se
 
 - **Countries/regions:** all (or as you prefer)
 - **Price:** Free
-- **App bundle:** `store/builds/shadow-runner-1.0.0-1.aab`
-- **Release name:** `1.0.0 (1)`
+- **App bundle:** `store/builds/twinshade-1.0.0-4.aab`
+- **Release name:** `1.0.0 (4)`
 - **Release notes** (en-US):
 ```
 <en-US>
-Welcome to Shadow Runner! Run through two worlds at once – 30 levels, a daily challenge and endless mode.
+Welcome to Twinshade! Run through two worlds at once – 30 levels, a daily challenge and endless mode.
 </en-US>
 ```

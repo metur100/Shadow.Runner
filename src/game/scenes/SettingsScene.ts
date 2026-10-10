@@ -86,7 +86,7 @@ export class SettingsScene extends BaseScene {
       focus: this.focus,
       onClick: () => this.back(),
     });
-    addText(this, this.W / 2, this.H - this.safeBottom - 60, 'Shadow Runner 1.0 · Made by Medin Turkes', { size: 20, weight: '500', color: COLORS.muted });
+    addText(this, this.W / 2, this.H - this.safeBottom - 60, 'Twinshade 1.0 · Made by Medin Turkes', { size: 20, weight: '500', color: COLORS.muted });
     addText(this, this.W / 2, this.H - this.safeBottom - 30, 'Works offline. No accounts, no tracking – progress stays on this device.', {
       size: 17,
       weight: '500',

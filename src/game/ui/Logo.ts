@@ -10,7 +10,7 @@ function gradientFill(text: Phaser.GameObjects.Text, stops: [number, string][]):
 }
 
 /**
- * "SHADOW RUNNER" wordmark: a bold white SHADOW over an electric-blue RUNNER, slanted for speed, with a
+ * "TWINSHADE" wordmark: a bold white TWIN over an electric-blue SHADE, slanted for speed, with a
  * glowing underline and the tagline "Switch realities. Master both worlds."
  */
 export function drawLogo(scene: Phaser.Scene, x: number, y: number, scale: number, animate = true): Phaser.GameObjects.Container {
@@ -19,13 +19,13 @@ export function drawLogo(scene: Phaser.Scene, x: number, y: number, scale: numbe
   glow.fillStyle(0x4f7dff, 0.18);
   glow.fillEllipse(0, 10, 640, 260);
   const style = { size: 112, weight: 'italic 700', stroke: '#0b0822', strokeThickness: 16, shadow: true } as const;
-  const top = addText(scene, -14, -58, 'SHADOW', { ...style, color: '#ffffff' });
+  const top = addText(scene, -14, -58, 'TWIN', { ...style, color: '#ffffff' });
   gradientFill(top, [
     [0, '#ffffff'],
     [0.7, '#f1ecff'],
     [1, '#c9bfff'],
   ]);
-  const bottom = addText(scene, 18, 52, 'RUNNER', { ...style, color: '#5a8cff' });
+  const bottom = addText(scene, 18, 52, 'SHADE', { ...style, color: '#5a8cff' });
   gradientFill(bottom, [
     [0, '#9fc2ff'],
     [0.45, '#4f7dff'],

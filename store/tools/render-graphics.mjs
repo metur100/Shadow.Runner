@@ -139,7 +139,7 @@ function featureGraphic() {
   </style>
   <div class="seam"></div>
   <div class="icon">${roundedIcon}</div>
-  <h1>SHADOW<span>RUNNER</span></h1>
+  <h1>TWIN<span>SHADE</span></h1>
   <p>Switch realities. Master both worlds.</p>
   <div class="phone a"></div><div class="phone b"></div>`;
 }
@@ -174,7 +174,7 @@ function headerImage(W, H) {
       background-size:cover; background-position:center top; box-shadow: 0 ${H * 0.03}px ${H * 0.07}px rgba(5,3,15,0.5); }
   </style>
   <div class="seam"></div>
-  <div class="text"><div class="icon">${roundedIcon}</div><h1>SHADOW<span>RUNNER</span></h1><p>Switch realities. Master both worlds.</p></div>
+  <div class="text"><div class="icon">${roundedIcon}</div><h1>TWIN<span>SHADE</span></h1><p>Switch realities. Master both worlds.</p></div>
   ${phones}`;
 }
 

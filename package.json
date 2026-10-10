@@ -2,7 +2,7 @@
   "name": "shadow-runner",
   "private": true,
   "version": "1.0.0",
-  "description": "Shadow Runner – run through two worlds at once and switch between your physical self and your shadow.",
+  "description": "Twinshade – run through two worlds at once and switch between your physical self and your shadow.",
   "author": "Medin Turkes",
   "type": "module",
   "scripts": {

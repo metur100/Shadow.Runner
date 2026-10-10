@@ -17,7 +17,7 @@ export class LoadingScene extends BaseScene {
   }
 
   create(): void {
-    this.setupScene('Loading Shadow Runner');
+    this.setupScene('Loading Twinshade');
     const { W, H } = this;
     const bg = this.add.graphics();
     bg.fillGradientStyle(0xffb27a, 0xffb27a, 0x2a1b5c, 0x2a1b5c, 1);

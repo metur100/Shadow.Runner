@@ -6,7 +6,7 @@ Bundle ID: `com.certidevelopment.shadowrunner` · SKU suggestion: `shadow-runner
 
 | Field | Value |
 | --- | --- |
-| **Name** (max 30) | `Shadow Runner: Two Worlds` |
+| **Name** (max 30) | `Twinshade: Two Worlds Runner` |
 | **Subtitle** (max 30) | `Switch worlds. Outrun light.` |
 | **Primary category** | Games → subcategory **Action** |
 | **Secondary category** | Games → subcategory **Casual** |
@@ -26,7 +26,7 @@ Play two versions of yourself at once: your shadow runs through walls, light des
 ```
 Two worlds. One runner.
 
-Shadow Runner is a fast, clever 3D runner where you play two versions of the same character at the same time. Your physical self races through a bright, colourful city at the top of the screen – and your shadow runs through a dark, glowing shadow world below. One tap swaps which of you is real.
+Twinshade is a fast, clever 3D runner where you play two versions of the same character at the same time. Your physical self races through a bright, colourful city at the top of the screen – and your shadow runs through a dark, glowing shadow world below. One tap swaps which of you is real.
 
 Walls stop your physical self, but your shadow phases straight through them. Bright light destroys your shadow, but your physical self runs safely beneath it. Read what is coming in both worlds, switch at the right moment and keep running.
 
@@ -103,7 +103,7 @@ Already answered in the binary (`ITSAppUsesNonExemptEncryption = false`).
 - **Contact:** Medin Turkes · certidevelopment@gmail.com · (your phone number)
 - **Notes for the reviewer:**
 ```
-Shadow Runner is a single-player offline game. No account or login is needed and the app makes no network requests.
+Twinshade is a single-player offline game. No account or login is needed and the app makes no network requests.
 
 On first launch an interactive tutorial starts: it pauses at each step until you perform the action (tap to switch worlds, swipe up to jump, swipe down to slide). Levels then unlock one after another from the main menu. Daily Challenge is available any time; Endless mode unlocks after World 1.
 ```

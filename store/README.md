@@ -1,4 +1,4 @@
-# Shadow Runner – store release kit
+# Twinshade – store release kit
 
 Everything needed to publish on **Google Play** and the **Apple App Store**.
 
@@ -20,12 +20,31 @@ store/
 
 | Identity | Value |
 | --- | --- |
-| App name | Shadow Runner (store name "Shadow Runner: Two Worlds") |
+| App name | Twinshade (store name "Twinshade: Two Worlds Runner") |
 | Android package / iOS bundle ID | `com.certidevelopment.shadowrunner` |
-| Version | 1.0.0 (Android versionCode 3, iOS buildNumber 3) |
+| Version | 1.0.0 (Android versionCode 4, iOS buildNumber 4) |
 | Expo project | `@certi-development/shadow-runner` (ID `9b1c9adc-0803-4024-a167-b37429a1d734`) |
 
 ---
+
+## Why the game is called Twinshade
+
+Google Play rejected the first submission, named "Shadow Runner", under the **Impersonation policy**. That name is too close to existing trademarked titles (the *Shadowrun* series and other games called "Shadow Runner"). The game was renamed **Twinshade** everywhere players see the name:
+
+- the launcher label;
+- the in-game logo, loading screen and settings;
+- the store graphics;
+- the store listings;
+- the website.
+
+The package ID `com.certidevelopment.shadowrunner` and the Expo slug stay the same. Players never see them, and the package ID can't change after the first upload.
+
+**Resubmitting on Google Play:**
+
+1. In **Main store listing**, change the app name to *Twinshade: Two Worlds Runner* in **every** language listing, including en-GB, which the rejection named.
+2. Paste the new descriptions and upload the new feature graphic.
+3. Upload the versionCode 4 AAB.
+4. Send the changes for review from **Publishing overview**.
 
 ## 0. Website, privacy policy and support URL
 
@@ -49,12 +68,12 @@ eas build -p android --profile production
 
 The AAB is signed with the upload key from `credentials.json` (local credentials).
 
-The 1.0.0 (3) bundle is in `store/builds/shadow-runner-1.0.0-3.aab`.
+The 1.0.0 (4) bundle (renamed to Twinshade) is in `store/builds/twinshade-1.0.0-4.aab`.
 
 ### First upload (must be done by hand once)
 
 1. **Create the app.** In Play Console, choose **Create app**:
-   - name: *Shadow Runner: Two Worlds*
+   - name: *Twinshade: Two Worlds Runner*
    - default language: English (US)
    - type: **Game**
    - price: **Free**

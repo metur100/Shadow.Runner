@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Shadow Runner",
+    "name": "Twinshade",
     "slug": "shadow-runner",
     "description": "Run through two worlds at once – switch between your physical self and your shadow.",
     "version": "1.0.0",
@@ -11,7 +11,7 @@
     "primaryColor": "#7b5cff",
     "ios": {
       "bundleIdentifier": "com.certidevelopment.shadowrunner",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "supportsTablet": true,
       "requireFullScreen": true,
       "config": {
@@ -29,7 +29,7 @@
     },
     "android": {
       "package": "com.certidevelopment.shadowrunner",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
