@@ -100,7 +100,7 @@ export abstract class BaseScene extends Phaser.Scene {
         t += dt;
         scroll += (GameContext.reducedMotion ? 0 : 6.5 * 42) * dt;
         for (const w of worlds) {
-          w.update(scroll, t, dt, { anim: 'run', h: 0, solid: true, speed: 6.5, cheer: false, reducedMotion: GameContext.reducedMotion }, true);
+          w.update(scroll, t, dt, { anim: 'run', h: 0, lx: 0, solid: true, speed: 6.5, cheer: false, reducedMotion: GameContext.reducedMotion }, true);
         }
         // Each half shows its world's lower part (street and runner) like the gameplay lanes.
         const laneH = gameplayLayout(this.H, this.safeTop, this.safeBottom).laneH;

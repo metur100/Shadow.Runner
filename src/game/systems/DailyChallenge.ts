@@ -16,12 +16,14 @@ const POOL: PatternName[] = [
   'leverGate', 'plateBridge', 'lampTrap', 'movingPlatform', 'pulseLight', 'wallRun', 'laser', 'laserLight',
   'timedDoor', 'train', 'sign', 'gear', 'gearPair', 'elevator', 'pendulum', 'phasePlatforms', 'collapse',
   'shadowBridge', 'beams', 'portal', 'keyDoor', 'multiLight', 'eclipse', 'movingGate', 'silhouette', 'falling',
+  'laneBlock', 'slalom', 'laneSpikes', 'laneDarkSpikes', 'laneCrates', 'traffic',
 ];
 
 /** Special twists: each day gets one, played twice in the level. */
 const TWISTS: { name: string; patterns: PatternName[] }[] = [
   { name: 'Eclipse Day', patterns: ['eclipse'] },
-  { name: 'Rush Hour', patterns: ['train', 'speed'] },
+  { name: 'Rush Hour', patterns: ['traffic', 'train', 'speed'] },
+  { name: 'Slalom', patterns: ['slalom', 'laneCrates'] },
   { name: 'Lamp Alley', patterns: ['lampTrap', 'lampTrap'] },
   { name: 'Mirror Run', patterns: ['portal', 'shadowPortal'] },
   { name: 'Clockwork Panic', patterns: ['pendulum', 'phasePlatforms'] },

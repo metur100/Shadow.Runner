@@ -37,6 +37,8 @@ export interface RunnerVisual {
   anim: AnimationState;
   /** Height above the ground (metres). */
   h: number;
+  /** Lateral position in lane units (−1 left … 1 right); the world places the runner there. */
+  lx: number;
   /** Solid (active) form: full colour / glow; otherwise a faint echo. */
   solid: boolean;
   /** Run speed in m/s (drives the stride rate). */
@@ -64,6 +66,7 @@ export class Runner3D {
   private lastAnim: AnimationState = 'run';
   private alpha = 1;
   private time = 0;
+  private lastLx = 0;
 
   constructor(
     readonly side: Side,
@@ -208,6 +211,11 @@ export class Runner3D {
     this.mixer.update(dt);
 
     this.root.position.y = v.h;
+    // Lean into lane changes (a jump in lx after a respawn is not a move).
+    const vel = dt > 0 ? (v.lx - this.lastLx) / dt : 0;
+    this.lastLx = v.lx;
+    const roll = Math.abs(vel) > 12 || v.reducedMotion ? 0 : Math.max(-0.32, Math.min(0.32, -vel * 0.05));
+    this.root.rotation.z += (roll - this.root.rotation.z) * Math.min(1, dt * 14);
     // Lean into jumps, tuck on the way down.
     const targetTilt = anim === 'jump' ? -0.18 : anim === 'fall' ? 0.12 : 0;
     this.model.rotation.x += (targetTilt - this.model.rotation.x) * Math.min(1, dt * 10);

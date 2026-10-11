@@ -24,7 +24,7 @@ Walls stop your physical self, but your shadow phases straight through them. Bri
 
 HOW TO PLAY
 • Tap anywhere to switch between your physical self and your shadow
-• Swipe up to jump, swipe down to slide
+• Swipe left and right to change lanes, up to jump, down to slide
 • Collect coins in the reality world and crystals in the shadow world
 • Pull levers, step on plates and find keys – what you do in one world changes the other
 • Reach the great portal at the end of each level and earn up to three stars
@@ -106,11 +106,11 @@ Why this is accurate: the game makes no network requests at all. Progress and se
 
 - **Countries/regions:** all (or as you prefer)
 - **Price:** Free
-- **App bundle:** `store/builds/twinshade-1.0.0-4.aab`
-- **Release name:** `1.0.0 (4)`
+- **App bundle:** `store/builds/twinshade-1.0.0-5.aab`
+- **Release name:** `1.0.0 (5)`
 - **Release notes** (en-US):
 ```
 <en-US>
-Welcome to Twinshade! Run through two worlds at once – 30 levels, a daily challenge and endless mode.
+Welcome to Twinshade! Run through two worlds at once – 30 levels, a daily challenge and endless mode. Swipe left and right to switch between three lanes and dodge barriers, spikes and oncoming cars.
 </en-US>
 ```

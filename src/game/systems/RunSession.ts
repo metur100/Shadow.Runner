@@ -6,8 +6,8 @@ import { Portal } from '../entities/Portal';
 import type { FormState, RunnerForm } from '../entities/RunnerForm';
 import { ShadowCharacter } from '../entities/ShadowCharacter';
 import { INTERACT_RANGE, Switch } from '../entities/Switch';
-import type { CollectibleKind, EffectAction, Form, LevelDefinition, ObstacleKind, Side } from '../levels/LevelDefinition';
-import { PHYSICS } from '../utils/Constants';
+import type { CollectibleKind, EffectAction, Form, Lane, LevelDefinition, ObstacleKind, Side } from '../levels/LevelDefinition';
+import { LANES, PHYSICS } from '../utils/Constants';
 import { CollisionSystem } from './CollisionSystem';
 import { CrossWorldInteractionSystem, type AppliedEffect, type PendingRevert } from './CrossWorldInteractionSystem';
 import { RunnerSystem, SpeedProfile } from './RunnerSystem';
@@ -33,6 +33,8 @@ export type SimEvent =
   | { type: 'jump' | 'land' | 'slide' | 'drop'; form: Side }
   | { type: 'switch'; to: Form; forced: boolean }
   | { type: 'switchBlocked' }
+  | { type: 'lane'; lane: Lane }
+  | { type: 'laneBlocked'; dir: -1 | 1 }
   | { type: 'collect'; kind: CollectibleKind; side: Side; index: number }
   | { type: 'trigger'; index: number; side: Side }
   | { type: 'effect'; target: number; action: EffectAction }
@@ -53,6 +55,8 @@ export const HIT_PAUSE = 0.9;
 interface Snapshot {
   x: number;
   t: number;
+  lane: Lane;
+  lx: number;
   active: Form;
   cooldown: number;
   forms: [FormState, FormState];
@@ -109,6 +113,10 @@ export class RunSession {
 
   state: SessionState = 'running';
   x = 0;
+  /** Target lane (both forms share it) and the current lateral position in lane units. */
+  lane: Lane = 0;
+  lx = 0;
+  laneChanges = 0;
   speed = 0;
   /** Level clock: drives every moving obstacle. Restored on respawn. */
   t = 0;
@@ -257,6 +265,20 @@ export class RunSession {
     return true;
   }
 
+  /** Moves one lane left (−1) or right (1). Both forms change lanes together, in the air too. */
+  moveLane(dir: -1 | 1): boolean {
+    if (this.state !== 'running') return false;
+    const next = this.lane + dir;
+    if (next < -1 || next > 1) {
+      this.events.push({ type: 'laneBlocked', dir });
+      return false;
+    }
+    this.lane = next as Lane;
+    this.laneChanges++;
+    this.events.push({ type: 'lane', lane: this.lane });
+    return true;
+  }
+
   /** `strength` 0..1 (swipe length / key hold) sets the jump height between min and max. */
   jump(strength = 0): void {
     if (this.state !== 'running') return;
@@ -318,6 +340,9 @@ export class RunSession {
     this.x = moved.x;
     this.speed = moved.speed;
     if (this.x > this.maxX) this.maxX = this.x;
+    const maxShift = dt / LANES.changeTime;
+    this.lx += Math.max(-maxShift, Math.min(maxShift, this.lane - this.lx));
+    this.collisions.lx = this.lx;
 
     // Eclipse zones merge the worlds.
     const eclipse = this.inEclipse(this.x);
@@ -386,10 +411,13 @@ export class RunSession {
   /** Falling objects and trains start moving when the runner gets close. */
   private triggerApproaching(): void {
     for (const side of ['real', 'shadow'] as const) {
-      for (const o of this.collisions.near(side, this.x + 900)) {
-        if (o.kind !== 'falling' && o.kind !== 'train') continue;
-        const st = this.obstacleStates[o.index];
-        if (st.triggeredAt < 0 && this.x >= o.x - (o.def.trigger ?? 420)) st.triggeredAt = this.t;
+      // Every grid cell from the runner to 900 units ahead (a trigger distance is at most that).
+      for (let cx = this.x; cx < this.x + 900 + 256; cx += 256) {
+        for (const o of this.collisions.near(side, cx)) {
+          if (o.kind !== 'falling' && o.kind !== 'train') continue;
+          const st = this.obstacleStates[o.index];
+          if (st.triggeredAt < 0 && this.x >= o.x - (o.def.trigger ?? 420)) st.triggeredAt = this.t;
+        }
       }
     }
   }
@@ -401,7 +429,7 @@ export class RunSession {
       const c = this.collectibles[i];
       if (c.x > this.x + 80) break;
       if (this.collected[i] || c.side !== form.side) continue;
-      if (!c.touches(this.x, 20, form.h, height)) continue;
+      if (Math.abs(c.lane - this.lx) >= LANES.pickup || !c.touches(this.x, 20, form.h, height)) continue;
       this.collected[i] = 1;
       if (c.kind === 'coin') this.coins++;
       else if (c.kind === 'crystal') this.crystals++;
@@ -511,6 +539,8 @@ export class RunSession {
     return {
       x: this.x,
       t: this.t,
+      lane: this.lane,
+      lx: this.lx,
       active: this.switcher.active,
       cooldown: this.switcher.cooldown,
       forms: [this.physical.snapshot(), this.shadow.snapshot()],
@@ -530,6 +560,9 @@ export class RunSession {
   restore(s: Snapshot): void {
     this.x = s.x;
     this.t = s.t;
+    this.lane = s.lane;
+    this.lx = s.lx;
+    this.collisions.lx = s.lx;
     this.switcher.active = s.active;
     this.switcher.cooldown = s.cooldown;
     this.physical.restore(s.forms[0]);
@@ -552,7 +585,7 @@ export class RunSession {
   fullSnapshot(): { core: Snapshot; extra: number[]; state: SessionState; failure: RunSession['failure']; switches: number } {
     return {
       core: this.snapshot(),
-      extra: [this.playTime, this.lives, this.damage, this.nearMisses, this.checkpointIndex, this.checkpointsReached, this.maxX, this.hitTimer],
+      extra: [this.playTime, this.lives, this.damage, this.nearMisses, this.checkpointIndex, this.checkpointsReached, this.maxX, this.hitTimer, this.laneChanges],
       state: this.state,
       failure: this.failure,
       switches: this.switcher.count,
@@ -561,7 +594,7 @@ export class RunSession {
 
   fullRestore(s: ReturnType<RunSession['fullSnapshot']>): void {
     this.restore(s.core);
-    [this.playTime, this.lives, this.damage, this.nearMisses, this.checkpointIndex, this.checkpointsReached, this.maxX, this.hitTimer] = s.extra;
+    [this.playTime, this.lives, this.damage, this.nearMisses, this.checkpointIndex, this.checkpointsReached, this.maxX, this.hitTimer, this.laneChanges] = s.extra;
     this.state = s.state;
     this.failure = s.failure;
     this.switcher.count = s.switches;

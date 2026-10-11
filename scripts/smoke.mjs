@@ -5,7 +5,7 @@
  *   npm run smoke -- http://localhost:5173/
  *
  * Plays like a user with real pointer events: loading → interactive tutorial (taps and swipes) →
- * level 1 (switch, jump and slide checked live, then finished) → results → next level → reload
+ * level 1 (switch, jump, slide and lane changes checked live, then finished) → results → next level → reload
  * (progress must persist) → targeted mechanic checks (walls, shadow walls, light, cross-world lever,
  * portals) → pause on focus loss → settings → collection, worlds, levels, daily, endless → reset with
  * confirmation. Then loads all 30 levels and checks narrow phone, tablet and desktop layouts.
@@ -89,6 +89,20 @@ async function swipe(page, dy) {
   await sleep(60);
 }
 
+async function swipeX(page, dx) {
+  const layout = await page.evaluate(() => window.__SR__.layout());
+  const a = await pagePoint(page, 360, layout.shadowTop + layout.laneH * 0.5);
+  const b = await pagePoint(page, 360 + dx, layout.shadowTop + layout.laneH * 0.5);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 6; i++) {
+    await page.mouse.move(a.x + ((b.x - a.x) * i) / 6, a.y);
+    await sleep(12);
+  }
+  await page.mouse.up();
+  await sleep(60);
+}
+
 const run = (page) => page.evaluate(() => window.__SR__.run());
 
 async function newPage(browser, viewport, opts = {}) {
@@ -128,6 +142,8 @@ try {
   const prompts = [
     ['tap', 'This is you'],
     ['tap', 'your shadow'],
+    ['left', 'change lane left'],
+    ['right', 'change lane right'],
     ['tap', 'switch to shadow'],
     ['tap', 'switch to reality'],
     ['up', 'jump'],
@@ -147,6 +163,7 @@ try {
     }
     await sleep(250);
     if (action === 'tap') await tapLane(page);
+    else if (action === 'left' || action === 'right') await swipeX(page, action === 'left' ? -170 : 170);
     else await swipe(page, action === 'up' ? -170 : 170);
     console.log(`  prompt "${name}" → ${action}`);
     await sleep(350);
@@ -186,6 +203,18 @@ try {
   await sleep(120);
   r = await run(page);
   check(r.physicalH > 10, 'Space jumps');
+  await sleep(700);
+  const lane0 = (await run(page)).lane;
+  await swipeX(page, lane0 > -1 ? -170 : 170);
+  r = await run(page);
+  check(r.lane === lane0 + (lane0 > -1 ? -1 : 1), `a sideways swipe changes lanes (${lane0} → ${r.lane})`);
+  await page.keyboard.press(r.lane < 1 ? 'ArrowRight' : 'ArrowLeft');
+  const lane1 = r.lane;
+  r = await run(page);
+  check(r.lane !== lane1, `the arrow keys change lanes (${lane1} → ${r.lane})`);
+  await sleep(400);
+  r = await run(page);
+  check(Math.abs(r.lx - r.lane) < 0.01, `the runner slides across to the new lane (lx ${r.lx.toFixed(2)})`);
   await page.screenshot({ path: path.join(out, '03-level1.png') });
 
   step('Finish level 1 → results → next level');

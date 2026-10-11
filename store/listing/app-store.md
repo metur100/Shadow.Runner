@@ -32,7 +32,7 @@ Walls stop your physical self, but your shadow phases straight through them. Bri
 
 HOW TO PLAY
 • Tap anywhere to switch between your physical self and your shadow
-• Swipe up to jump, swipe down to slide
+• Swipe left and right to change lanes, up to jump, down to slide
 • Collect coins in the reality world and crystals in the shadow world
 • Pull levers, step on plates and find keys – what you do in one world changes the other
 • Reach the great portal at the end of each level and earn up to three stars
@@ -105,5 +105,5 @@ Already answered in the binary (`ITSAppUsesNonExemptEncryption = false`).
 ```
 Twinshade is a single-player offline game. No account or login is needed and the app makes no network requests.
 
-On first launch an interactive tutorial starts: it pauses at each step until you perform the action (tap to switch worlds, swipe up to jump, swipe down to slide). Levels then unlock one after another from the main menu. Daily Challenge is available any time; Endless mode unlocks after World 1.
+On first launch an interactive tutorial starts: it pauses at each step until you perform the action (swipe left / right to change lanes, tap to switch worlds, swipe up to jump, swipe down to slide). Levels then unlock one after another from the main menu. Daily Challenge is available any time; Endless mode unlocks after World 1.
 ```

@@ -40,7 +40,7 @@ export class LaneView {
   private readonly border: Phaser.GameObjects.Graphics;
   private readonly v = new THREE.Vector3();
   private dimAlpha = 0;
-  private visual: RunnerVisual = { anim: 'run', h: 0, solid: true, speed: 8, cheer: false, reducedMotion: false };
+  private visual: RunnerVisual = { anim: 'run', h: 0, lx: 0, solid: true, speed: 8, cheer: false, reducedMotion: false };
   private onGround = true;
   private scroll = 0;
 
@@ -76,19 +76,19 @@ export class LaneView {
     return this.opts.height;
   }
 
-  /** Screen x of the runner (the middle of the road). */
+  /** Screen x of the runner (it moves across the lanes). */
   get runnerX(): number {
-    return this.opts.width / 2;
+    return this.project(this.scroll, 40, this.visual.lx).x;
   }
 
   /** Screen y of a height above the ground at the runner's position. */
   screenY(h: number): number {
-    return this.project(this.scroll, h).y;
+    return this.project(this.scroll, h, this.visual.lx).y;
   }
 
-  /** Screen position of a point in this world (sim x, height). */
-  project(worldX: number, h: number): { x: number; y: number } {
-    const p = this.world.projectSim(worldX, h, this.v);
+  /** Screen position of a point in this world (sim x, height, lateral position in lanes). */
+  project(worldX: number, h: number, lx = 0): { x: number; y: number } {
+    const p = this.world.projectSim(worldX, h, this.v, lx);
     return { x: ((p.x + 1) / 2) * this.opts.width, y: this.opts.top + ((1 - p.y) / 2) * this.opts.height };
   }
 

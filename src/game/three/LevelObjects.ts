@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 
 import { lightIntensity, lightState } from '../entities/LightZone';
+import type { Collectible } from '../entities/Collectible';
 import type { Obstacle, ObstacleState } from '../entities/Obstacle';
 import { PORTAL_HEIGHT } from '../entities/Portal';
 import type { Side } from '../levels/LevelDefinition';
 import type { RunSession } from '../systems/RunSession';
 import { glowMaterial, rimMaterial, shadowed } from './Materials';
 import { instance, remapMaterials } from './Models';
-import { FRONT, ROAD_HALF, S, WALK_TOP } from './Street';
+import { FRONT, LANE_M, ROAD_HALF, S, WALK_TOP } from './Street';
 import { breachTexture, brickTexture, chevronTexture, crossDecal, crystalFaceTexture, glowTexture, hazardTexture, pavingTexture, shaftTexture, swirlTexture } from './Textures';
 
 const DANGER = 0xff3a4c;
@@ -41,6 +42,10 @@ function own<T extends THREE.Material>(list: THREE.Material[], m: T): T {
 }
 
 const zOf = (x: number) => -x * S;
+/** Lane centres across the road (metres). */
+const LANE_XS = [-LANE_M, 0, LANE_M];
+/** Drawn width of something that fills one lane. */
+const LANE_W = LANE_M * 0.94;
 
 /** Box geometry whose UVs are in metres / `unit`, so tiling textures keep their scale on any size. */
 function tiledBox(w: number, h: number, d: number, unit = 2): THREE.BoxGeometry {
@@ -152,7 +157,7 @@ export class LevelObjects {
       const key = `c${item.index}`;
       const inRange = item.x > lo && item.x < hi;
       const v = this.views.get(key);
-      if (inRange && !v) this.addView(key, this.createCollectible(item.kind, item.x, item.y));
+      if (inRange && !v) this.addView(key, this.createCollectible(item));
       else if (!inRange && v) this.removeView(key);
     }
     for (const sw of s.switches) {
@@ -220,11 +225,24 @@ export class LevelObjects {
     const depth = Math.max(0.35, o.w * S);
     let update: View['update'] = () => undefined;
     const mine: THREE.Material[] = [];
+    // Lane obstacles are drawn one lane wide around their lane centre; whole-road obstacles that are a
+    // single object (blades, falling crates, cars …) get one copy per lane, so what is drawn is what hurts.
+    const inLane = o.lane !== null;
+    root.position.x = inLane ? (o.lane as number) * LANE_M : 0;
+    const copies = inLane ? [0] : LANE_XS;
 
     switch (o.kind) {
       case 'wall': {
         const st = o.def.style;
         const wh = Math.min(o.h, WALL_VIEW_H) * S;
+        if (st === 'crate' && inLane) {
+          const c = instance('crate', { height: Math.min(wh, LANE_W * 0.8) });
+          c.position.set(0, 0, z0 - depth / 2);
+          c.rotation.y = (o.x % 5) * 0.05;
+          if (shadowSide) remapMaterials(c, (m) => shadowed(m, glow, false));
+          root.add(c);
+          break;
+        }
         if (st === 'crate') {
           const n = Math.ceil((ROAD_HALF * 2) / 1.25);
           const rows = Math.max(1, Math.round(wh / 1.25));
@@ -240,7 +258,7 @@ export class LevelObjects {
           break;
         }
         const stone = st === 'rock' || st === 'pillar' || st === 'ruin';
-        const width = stone ? ROAD_HALF * 2 + 0.6 : FRONT * 2;
+        const width = inLane ? LANE_W : stone ? ROAD_HALF * 2 + 0.6 : FRONT * 2;
         const mat = pal.get(`wall-${shadowSide}-${stone}`, () => {
           const map = shadowSide ? brickTexture(0x2e2466, 0x140e30) : stone ? brickTexture(0xb8a07a, 0x6e5a42) : brickTexture(0xa84a34, 0xc9b8a0);
           return new THREE.MeshStandardMaterial({ map, roughness: 0.92, emissive: shadowSide ? new THREE.Color(glow) : new THREE.Color(0), emissiveIntensity: shadowSide ? 0.05 : 0 });
@@ -264,9 +282,19 @@ export class LevelObjects {
         cap.position.set(0, wh + 0.12, z0 - depth / 2);
         root.add(cap);
         if (!shadowSide && !stone) {
-          const decal = new THREE.Mesh(this.geometry('decal', () => new THREE.PlaneGeometry(2.6, 2.6)), pal.get('cross', () => new THREE.MeshStandardMaterial({ map: crossDecal(), transparent: true, roughness: 0.9, depthWrite: false })));
+          const ds = Math.min(2.6, width * 0.8);
+          const decal = new THREE.Mesh(this.geometry(`decal-${ds}`, () => new THREE.PlaneGeometry(ds, ds)), pal.get('cross', () => new THREE.MeshStandardMaterial({ map: crossDecal(), transparent: true, roughness: 0.9, depthWrite: false })));
           decal.position.set(0, Math.min(2.2, wh * 0.5), z0 + 0.02);
           root.add(decal);
+        }
+        if (st === 'barrier') {
+          // Hazard band along the foot of a lane barrier: reads as "not this lane" from far away.
+          const band = new THREE.Mesh(
+            this.geometry(`barrier-band-${width}`, () => new THREE.BoxGeometry(width + 0.06, 0.55, depth + 0.06)),
+            shadowSide ? pal.get('barrier-band-shadow', () => new THREE.MeshBasicMaterial({ color: glow, toneMapped: false })) : pal.get('gate-hazard', () => new THREE.MeshStandardMaterial({ map: hazardTexture(), roughness: 0.6 })),
+          );
+          band.position.set(0, 0.45, z0 - depth / 2);
+          root.add(band);
         }
         if (this.style.highContrast) root.add(this.outline(width, wh, z0, 0xffd23d));
         break;
@@ -299,7 +327,8 @@ export class LevelObjects {
       case 'ceiling': {
         const bottom = o.y * S;
         const beamH = 0.9;
-        const width = FRONT * 2;
+        const width = inLane ? LANE_W : FRONT * 2;
+        const half = inLane ? LANE_W / 2 : ROAD_HALF + 0.7;
         const beamMat = shadowSide
           ? pal.get('beam-shadow', () => new THREE.MeshStandardMaterial({ map: brickTexture(0x2e2466, 0x140e30), roughness: 0.9 }))
           : pal.get('beam-hazard', () => {
@@ -308,7 +337,7 @@ export class LevelObjects {
               tex.repeat.set(10, 1);
               return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.2 });
             });
-        const beam = new THREE.Mesh(this.geometry(`beam-${depth}`, () => new THREE.BoxGeometry(width, beamH, Math.max(depth, 0.5))), beamMat);
+        const beam = new THREE.Mesh(this.geometry(`beam-${depth}-${width}`, () => new THREE.BoxGeometry(width, beamH, Math.max(depth, 0.5))), beamMat);
         beam.position.set(0, bottom + beamH / 2, z0 - depth / 2);
         beam.castShadow = this.style.detail;
         root.add(beam);
@@ -316,19 +345,21 @@ export class LevelObjects {
         const postMat = pal.get(`post-${shadowSide}`, () => new THREE.MeshStandardMaterial({ color: shadowSide ? 0x2a2050 : 0x4a4f63, roughness: 0.5, metalness: 0.6 }));
         for (const dir of [-1, 1]) {
           const post = new THREE.Mesh(this.geometry(`post-${bottom}`, () => new THREE.BoxGeometry(0.35, bottom + beamH + 3, 0.35)), postMat);
-          post.position.set(dir * (ROAD_HALF + 0.7), (bottom + beamH + 3) / 2, z0 - depth / 2);
+          post.position.set(dir * half, (bottom + beamH + 3) / 2, z0 - depth / 2);
           root.add(post);
         }
-        const top = new THREE.Mesh(this.geometry('beam-top', () => new THREE.BoxGeometry(width, 0.3, 0.3)), postMat);
+        const top = new THREE.Mesh(this.geometry(`beam-top-${width}`, () => new THREE.BoxGeometry(width, 0.3, 0.3)), postMat);
         top.position.set(0, bottom + beamH + 3, z0 - depth / 2);
         root.add(top);
         if (shadowSide) {
           // Crystal fangs hanging under the beam.
-          for (let i = 0; i < 9; i++) {
+          const fangs = inLane ? 4 : 9;
+          const span = inLane ? LANE_W / 2 - 0.3 : ROAD_HALF - 0.4;
+          for (let i = 0; i < fangs; i++) {
             const c = instance('crystal-small', { height: 0.55 });
             remapMaterials(c, () => pal.get('fang', () => new THREE.MeshStandardMaterial({ color: 0x3a2a8a, emissive: new THREE.Color(glow), emissiveIntensity: 0.8, roughness: 0.3 })));
             c.rotation.z = Math.PI;
-            c.position.set(-ROAD_HALF + 0.4 + i * ((ROAD_HALF * 2 - 0.8) / 8), bottom + 0.05, z0 - depth / 2);
+            c.position.set(-span + i * ((span * 2) / (fangs - 1)), bottom + 0.05, z0 - depth / 2);
             root.add(c);
           }
         }
@@ -338,8 +369,9 @@ export class LevelObjects {
       case 'spikes': {
         const h = o.h * S;
         const rows = Math.max(1, Math.round(depth / 0.45));
-        const cols = 13;
-        const base = new THREE.Mesh(this.geometry(`spikebase-${depth}`, () => new THREE.BoxGeometry(ROAD_HALF * 2 + 0.4, 0.08, depth)), pal.get(`spikebase-${shadowSide}`, () => new THREE.MeshStandardMaterial({ color: shadowSide ? 0x1a1236 : 0x3a3d48, roughness: 0.6, metalness: 0.5 })));
+        const cols = inLane ? 5 : 13;
+        const span = inLane ? LANE_W : ROAD_HALF * 2 + 0.4;
+        const base = new THREE.Mesh(this.geometry(`spikebase-${depth}-${span}`, () => new THREE.BoxGeometry(span, 0.08, depth)), pal.get(`spikebase-${shadowSide}`, () => new THREE.MeshStandardMaterial({ color: shadowSide ? 0x1a1236 : 0x3a3d48, roughness: 0.6, metalness: 0.5 })));
         base.position.set(0, 0.04, z0 - depth / 2);
         root.add(base);
         const coneMat = shadowSide
@@ -351,7 +383,7 @@ export class LevelObjects {
         let k = 0;
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            const x = -ROAD_HALF + 0.25 + c * ((ROAD_HALF * 2 - 0.5) / (cols - 1)) + (r % 2) * 0.12;
+            const x = -span / 2 + 0.45 + c * ((span - 0.9) / (cols - 1)) + (r % 2) * 0.12;
             const sc = 0.85 + ((c * 7 + r * 3) % 5) * 0.06;
             m4.makeScale(1, sc, 1).setPosition(x, (h * sc) / 2 + 0.06, z0 - (r + 0.5) * (depth / rows));
             mesh.setMatrixAt(k++, m4);
@@ -361,7 +393,7 @@ export class LevelObjects {
         root.add(mesh);
         if (shadowSide && !this.style.reducedMotion) update = (t) => ((coneMat as THREE.MeshStandardMaterial).emissiveIntensity = 0.7 + 0.3 * Math.sin(t * 5));
         if (this.style.highContrast) {
-          const line = new THREE.Mesh(this.geometry('hc-line', () => new THREE.BoxGeometry(ROAD_HALF * 2, 0.06, 0.06)), pal.get('hc-danger', () => new THREE.MeshBasicMaterial({ color: DANGER })));
+          const line = new THREE.Mesh(this.geometry(`hc-line-${span}`, () => new THREE.BoxGeometry(span, 0.06, 0.06)), pal.get('hc-danger', () => new THREE.MeshBasicMaterial({ color: DANGER })));
           line.position.set(0, h + 0.1, z0);
           root.add(line);
         }
@@ -414,25 +446,26 @@ export class LevelObjects {
           mat = pal.get(`slab-${shadowSide}`, () => new THREE.MeshStandardMaterial({ map: pavingTexture(shadowSide ? 0x2a2058 : 0x8e8a9a, shadowSide ? 'dark' : 'slab'), roughness: 0.8, emissive: new THREE.Color(shadowSide ? glow : 0), emissiveIntensity: shadowSide ? 0.08 : 0 }));
         }
         if (o.def.cycle) mat = own(mine, mat);
-        const slab = new THREE.Mesh(tiledBox(ROAD_HALF * 2, thick, depth, 2.5), mat);
+        const slabW = inLane ? LANE_W : ROAD_HALF * 2;
+        const slab = new THREE.Mesh(tiledBox(slabW, thick, depth, 2.5), mat);
         slab.position.set(0, -thick / 2, -depth / 2);
         slab.castShadow = this.style.detail;
         slab.receiveShadow = true;
         holder.add(slab);
         // Glowing / painted edge on the front.
         const edgeMat = pal.get(`slab-edge-${shadowSide}`, () => new THREE.MeshBasicMaterial({ color: shadowSide ? glow : 0xffd23d, toneMapped: false }));
-        const edge = new THREE.Mesh(this.geometry('slab-edge', () => new THREE.BoxGeometry(ROAD_HALF * 2, 0.06, 0.06)), o.def.cycle ? own(mine, edgeMat) : edgeMat);
+        const edge = new THREE.Mesh(this.geometry(`slab-edge-${slabW}`, () => new THREE.BoxGeometry(slabW, 0.06, 0.06)), o.def.cycle ? own(mine, edgeMat) : edgeMat);
         edge.position.set(0, 0.01, 0.01);
         holder.add(edge);
         if (st === 'elevator') {
-          for (const x of [-ROAD_HALF + 0.3, ROAD_HALF - 0.3]) {
+          for (const x of [-slabW / 2 + 0.3, slabW / 2 - 0.3]) {
             const cable = new THREE.Mesh(this.geometry('cable', () => new THREE.CylinderGeometry(0.03, 0.03, 20, 6)), pal.get('cable', () => new THREE.MeshStandardMaterial({ color: 0x222233, metalness: 0.8, roughness: 0.4 })));
             cable.position.set(x, 10, -depth / 2);
             holder.add(cable);
           }
         }
         if (st === 'bridge' || st === 'brokenBridge' || st === 'shadowBridge') {
-          for (const x of [-ROAD_HALF, ROAD_HALF]) {
+          for (const x of [-slabW / 2, slabW / 2]) {
             const rail = new THREE.Mesh(this.geometry(`rail-${depth}`, () => new THREE.BoxGeometry(0.08, 0.08, depth)), pal.get(`rail-${st}`, () => new THREE.MeshStandardMaterial({ color: st === 'shadowBridge' ? glow : 0x5b3a1e, emissive: new THREE.Color(st === 'shadowBridge' ? glow : 0), roughness: 0.8 })));
             rail.position.set(x, 0.9, -depth / 2);
             holder.add(rail);
@@ -462,16 +495,20 @@ export class LevelObjects {
         const st = o.def.style;
         const holder = new THREE.Group();
         root.add(holder);
+        const offset = (t: number, state: ObstacleState) => ({
+          dx: o.def.motion?.axis === 'x' ? o.motionOffset(t, state) : 0,
+          dy: o.def.motion?.axis === 'y' ? o.motionOffset(t, state) : 0,
+        });
         if (st === 'sign') {
-          const w = ROAD_HALF * 2 + 0.6;
+          const w = inLane ? LANE_W : ROAD_HALF * 2 + 0.6;
           const h = o.h * S;
-          const sign = new THREE.Mesh(this.geometry(`sign-${h}`, () => new THREE.BoxGeometry(w, h, 0.3)), pal.get('sign', () => new THREE.MeshStandardMaterial({ color: 0x1f1a46, roughness: 0.5, emissive: new THREE.Color(0x2ee6ff), emissiveIntensity: 0.15 })));
+          const sign = new THREE.Mesh(this.geometry(`sign-${h}-${w}`, () => new THREE.BoxGeometry(w, h, 0.3)), pal.get('sign', () => new THREE.MeshStandardMaterial({ color: 0x1f1a46, roughness: 0.5, emissive: new THREE.Color(0x2ee6ff), emissiveIntensity: 0.15 })));
           holder.add(sign);
           for (const [y, c, len] of [
             [h * 0.22, 0xff3db8, 0.85],
             [-h * 0.12, 0x2ee6ff, 0.55],
           ] as [number, number, number][]) {
-            const strip = new THREE.Mesh(this.geometry(`strip-${len}`, () => new THREE.BoxGeometry(w * len, 0.12, 0.05)), pal.get(`strip-${c}`, () => new THREE.MeshBasicMaterial({ color: c, toneMapped: false })));
+            const strip = new THREE.Mesh(this.geometry(`strip-${len}-${w}`, () => new THREE.BoxGeometry(w * len, 0.12, 0.05)), pal.get(`strip-${c}`, () => new THREE.MeshBasicMaterial({ color: c, toneMapped: false })));
             strip.position.set(0, y, 0.17);
             holder.add(strip);
           }
@@ -481,45 +518,56 @@ export class LevelObjects {
             holder.add(cable);
           }
           update = (t, state) => {
-            const dx = o.def.motion?.axis === 'x' ? o.motionOffset(t, state) : 0;
-            const dy = o.def.motion?.axis === 'y' ? o.motionOffset(t, state) : 0;
+            const { dx, dy } = offset(t, state);
             holder.position.set(0, (o.y + dy) * S + h / 2, zOf(o.x + dx) - (o.w * S) / 2);
           };
         } else if (st === 'silhouette') {
-          // A shadow person blocking the way.
-          const fig = instance('runner', { height: o.h * S * 0.95 });
+          // Shadow people blocking the way.
           const body = pal.get('silhouette', () => rimMaterial(0x05030a, glow));
-          remapMaterials(fig, (m) => (/Eye/i.test(m.name) ? pal.get('red-eye', () => new THREE.MeshBasicMaterial({ color: DANGER, toneMapped: false })) : body));
-          holder.add(fig);
+          for (const cx of copies) {
+            const fig = instance('runner', { height: o.h * S * 0.95 });
+            remapMaterials(fig, (m) => (/Eye/i.test(m.name) ? pal.get('red-eye', () => new THREE.MeshBasicMaterial({ color: DANGER, toneMapped: false })) : body));
+            fig.position.x = cx;
+            holder.add(fig);
+          }
           update = (t, state) => {
-            const dx = o.def.motion?.axis === 'x' ? o.motionOffset(t, state) : 0;
-            const dy = o.def.motion?.axis === 'y' ? o.motionOffset(t, state) : 0;
+            const { dx, dy } = offset(t, state);
             holder.position.set(0, (o.y + dy) * S, zOf(o.x + dx) - (o.w * S) / 2);
           };
         } else {
           const gear = st === 'gear';
           const r = (o.w / 2) * S;
-          const geo = this.geometry(`saw-${gear}-${r}`, () => sawGeometry(r, gear));
+          // A blade wider than its lane is drawn smaller, lowered so its bottom edge stays where it hurts.
+          const rv = Math.min(r, LANE_M * 0.5);
+          const lower = rv < r ? rv - r * 0.9 : 0;
+          const geo = this.geometry(`saw-${gear}-${rv}`, () => sawGeometry(rv, gear));
           const mat = gear
             ? pal.get('brass', () => new THREE.MeshStandardMaterial({ color: 0xc98b4f, metalness: 0.85, roughness: 0.35 }))
             : st === 'thorn'
               ? pal.get('thorn', () => new THREE.MeshStandardMaterial({ color: 0x3a2a6a, emissive: new THREE.Color(glow), emissiveIntensity: 0.5, roughness: 0.4 }))
               : pal.get('steel', () => new THREE.MeshStandardMaterial({ color: 0xd8dee8, metalness: 0.95, roughness: 0.22 }));
-          const blade = new THREE.Mesh(geo, mat);
-          blade.castShadow = this.style.detail;
-          holder.add(blade);
-          const hub = new THREE.Mesh(this.geometry('hub', () => new THREE.CylinderGeometry(0.18, 0.18, 0.2, 16).rotateX(Math.PI / 2)), pal.get('hub', () => new THREE.MeshStandardMaterial({ color: 0x2a2a35, metalness: 0.7, roughness: 0.4 })));
-          holder.add(hub);
-          const arm = new THREE.Mesh(this.geometry('arm', () => new THREE.CylinderGeometry(0.06, 0.06, 20, 6)), pal.get('cable', () => new THREE.MeshStandardMaterial({ color: 0x222233, metalness: 0.8, roughness: 0.4 })));
-          arm.position.y = 10;
-          holder.add(arm);
-          const spark = sprite(pal.glowSprite(gear ? 0xffd27a : 0xffffff, 0.35), r * 3);
-          holder.add(spark);
+          const blades: THREE.Mesh[] = [];
+          for (const cx of copies) {
+            const blade = new THREE.Mesh(geo, mat);
+            blade.position.set(cx, lower, 0);
+            blade.castShadow = this.style.detail;
+            holder.add(blade);
+            blades.push(blade);
+            const hub = new THREE.Mesh(this.geometry('hub', () => new THREE.CylinderGeometry(0.18, 0.18, 0.2, 16).rotateX(Math.PI / 2)), pal.get('hub', () => new THREE.MeshStandardMaterial({ color: 0x2a2a35, metalness: 0.7, roughness: 0.4 })));
+            hub.position.set(cx, lower, 0);
+            holder.add(hub);
+            const arm = new THREE.Mesh(this.geometry('arm', () => new THREE.CylinderGeometry(0.06, 0.06, 20, 6)), pal.get('cable', () => new THREE.MeshStandardMaterial({ color: 0x222233, metalness: 0.8, roughness: 0.4 })));
+            arm.position.set(cx, lower + 10, 0);
+            holder.add(arm);
+            const spark = sprite(pal.glowSprite(gear ? 0xffd27a : 0xffffff, 0.35), rv * 3);
+            spark.position.set(cx, lower, 0);
+            holder.add(spark);
+          }
           update = (t, state) => {
-            const dx = o.def.motion?.axis === 'x' ? o.motionOffset(t, state) : 0;
-            const dy = o.def.motion?.axis === 'y' ? o.motionOffset(t, state) : 0;
+            const { dx, dy } = offset(t, state);
             holder.position.set(0, (o.y + dy) * S, zOf(o.x + o.w / 2 + dx));
-            blade.rotation.z = this.style.reducedMotion ? 0 : -t * (gear ? 2.5 : 12);
+            const spin = this.style.reducedMotion ? 0 : -t * (gear ? 2.5 : 12);
+            for (const b of blades) b.rotation.z = spin;
           };
         }
         break;
@@ -646,42 +694,59 @@ export class LevelObjects {
       case 'falling': {
         const holder = new THREE.Group();
         const rock = o.def.style === 'rock';
-        const size = Math.max(o.w, o.h) * S;
-        const box = rock ? new THREE.Mesh(this.geometry(`boulder-${size}`, () => new THREE.DodecahedronGeometry(size / 2, 0)), pal.get('boulder', () => new THREE.MeshStandardMaterial({ color: shadowSide ? 0x2a2050 : 0x8a7a6a, roughness: 0.95, flatShading: true }))) : instance('crate', { height: size });
-        if (rock) box.position.y = size / 2;
-        if (shadowSide && !rock) remapMaterials(box, (m) => shadowed(m, glow, false));
-        holder.add(box);
+        const size = Math.min(Math.max(o.w, o.h) * S, LANE_W * 0.85);
+        for (const cx of copies) {
+          const box = rock ? new THREE.Mesh(this.geometry(`boulder-${size}`, () => new THREE.DodecahedronGeometry(size / 2, 0)), pal.get('boulder', () => new THREE.MeshStandardMaterial({ color: shadowSide ? 0x2a2050 : 0x8a7a6a, roughness: 0.95, flatShading: true }))) : instance('crate', { height: size });
+          box.position.set(cx, rock ? size / 2 : 0, 0);
+          if (shadowSide && !rock) remapMaterials(box, (m) => shadowed(m, glow, false));
+          holder.add(box);
+        }
         root.add(holder);
-        const ring = new THREE.Mesh(this.geometry('warn-ring', () => new THREE.RingGeometry(0.7, 1, 32)), own(mine, pal.get('warn-ring', () => new THREE.MeshBasicMaterial({ color: DANGER, transparent: true, toneMapped: false, depthWrite: false }))));
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.set(0, 0.04, z0 - (o.w * S) / 2);
-        root.add(ring);
+        const ringMat = own(mine, pal.get('warn-ring', () => new THREE.MeshBasicMaterial({ color: DANGER, transparent: true, toneMapped: false, depthWrite: false })));
+        const rings: THREE.Mesh[] = [];
+        for (const cx of copies) {
+          const ring = new THREE.Mesh(this.geometry('warn-ring', () => new THREE.RingGeometry(0.7, 1, 32)), ringMat);
+          ring.rotation.x = -Math.PI / 2;
+          ring.position.set(cx, 0.04, z0 - (o.w * S) / 2);
+          root.add(ring);
+          rings.push(ring);
+        }
         update = (t, state) => {
           holder.position.set(0, o.fallingBottom(t, state) * S, z0 - (o.w * S) / 2);
           const fade = state.triggeredAt < 0 ? 1 : Math.max(0, 1 - (t - state.triggeredAt) * 2);
-          ring.visible = fade > 0;
-          ring.scale.setScalar(this.style.reducedMotion ? 1 : 0.9 + 0.1 * Math.sin(t * 10));
-          (ring.material as THREE.MeshBasicMaterial).opacity = fade;
+          for (const ring of rings) {
+            ring.visible = fade > 0;
+            ring.scale.setScalar(this.style.reducedMotion ? 1 : 0.9 + 0.1 * Math.sin(t * 10));
+          }
+          ringMat.opacity = fade;
         };
         break;
       }
       case 'train': {
         const holder = new THREE.Group();
-        const car = instance(shadowSide ? 'broken-car' : 'police-car', { height: 2.3 });
-        car.rotation.y = 0;
-        if (shadowSide) remapMaterials(car, (m) => shadowed(m, glow, true));
-        holder.add(car);
-        const size = car.userData.size as THREE.Vector3;
-        for (const x of [-size.x * 0.32, size.x * 0.32]) {
-          const head = sprite(pal.glowSprite(0xfff6d0, 1), 1.6);
-          head.position.set(x, 0.85, size.z / 2 + 0.1);
-          holder.add(head);
+        let size = new THREE.Vector3();
+        for (const cx of copies) {
+          const car = instance(shadowSide ? 'broken-car' : 'police-car', { height: 2.3 });
+          car.rotation.y = 0;
+          if (shadowSide) remapMaterials(car, (m) => shadowed(m, glow, true));
+          // Each car fits its lane.
+          const raw = car.userData.size as THREE.Vector3;
+          const k = Math.min(1, (LANE_W * 0.95) / raw.x);
+          car.scale.multiplyScalar(k);
+          size = raw.clone().multiplyScalar(k);
+          car.position.x = cx;
+          holder.add(car);
+          for (const x of [-size.x * 0.32, size.x * 0.32]) {
+            const head = sprite(pal.glowSprite(0xfff6d0, 1), 1.4);
+            head.position.set(cx + x, 0.85 * k, size.z / 2 + 0.1);
+            holder.add(head);
+          }
+          // Headlight beams on the road.
+          const beam = new THREE.Mesh(this.geometry('headbeam', () => new THREE.PlaneGeometry(1.9, 9)), pal.get('headbeam', () => glowMaterial(0xfff6d0, 0.35, glowTexture())));
+          beam.rotation.x = -Math.PI / 2;
+          beam.position.set(cx, 0.04, size.z / 2 + 4.5);
+          holder.add(beam);
         }
-        // Headlight beams on the road.
-        const beam = new THREE.Mesh(this.geometry('headbeam', () => new THREE.PlaneGeometry(3.2, 9)), pal.get('headbeam', () => glowMaterial(0xfff6d0, 0.35, glowTexture())));
-        beam.rotation.x = -Math.PI / 2;
-        beam.position.set(0, 0.04, size.z / 2 + 4.5);
-        holder.add(beam);
         root.add(holder);
         update = (t, state) => {
           holder.position.set(0, 0, zOf(o.trainX(t, state)) - size.z / 2);
@@ -690,21 +755,27 @@ export class LevelObjects {
       }
       case 'pendulum': {
         const pivotX = o.x + o.w / 2;
-        const beam = new THREE.Mesh(this.geometry('pend-beam', () => new THREE.BoxGeometry(FRONT * 2, 0.4, 0.4)), pal.get('pend-beam', () => new THREE.MeshStandardMaterial({ color: 0x3e2614, roughness: 0.7 })));
+        const beamW = inLane ? LANE_W : FRONT * 2;
+        const beam = new THREE.Mesh(this.geometry(`pend-beam-${beamW}`, () => new THREE.BoxGeometry(beamW, 0.4, 0.4)), pal.get('pend-beam', () => new THREE.MeshStandardMaterial({ color: 0x3e2614, roughness: 0.7 })));
         beam.position.set(0, o.y * S, zOf(pivotX));
         root.add(beam);
-        const chain = new THREE.Mesh(this.geometry('chain', () => new THREE.CylinderGeometry(0.05, 0.05, 1, 6).translate(0, -0.5, 0)), pal.get('chain', () => new THREE.MeshStandardMaterial({ color: 0x555566, metalness: 0.9, roughness: 0.3 })));
-        chain.position.set(0, o.y * S, zOf(pivotX));
-        root.add(chain);
-        const ball = instance('spiky-ball', { height: 1.6 });
-        if (shadowSide) remapMaterials(ball, (m) => shadowed(m, glow, false));
-        root.add(ball);
         const len = o.h * S;
-        chain.scale.y = len;
+        const parts = copies.map((cx) => {
+          const chain = new THREE.Mesh(this.geometry('chain', () => new THREE.CylinderGeometry(0.05, 0.05, 1, 6).translate(0, -0.5, 0)), pal.get('chain', () => new THREE.MeshStandardMaterial({ color: 0x555566, metalness: 0.9, roughness: 0.3 })));
+          chain.position.set(cx, o.y * S, zOf(pivotX));
+          chain.scale.y = len;
+          root.add(chain);
+          const ball = instance('spiky-ball', { height: 1.6 });
+          if (shadowSide) remapMaterials(ball, (m) => shadowed(m, glow, false));
+          root.add(ball);
+          return { cx, chain, ball };
+        });
         update = (t) => {
           const bob = o.pendulumBob(t);
-          ball.position.set(0, bob.y * S - 0.8, zOf(bob.x));
-          chain.rotation.x = -bob.angle;
+          for (const p of parts) {
+            p.ball.position.set(p.cx, bob.y * S - 0.8, zOf(bob.x));
+            p.chain.rotation.x = -bob.angle;
+          }
         };
         break;
       }
@@ -813,12 +884,13 @@ export class LevelObjects {
 
   // ───────────────────────────── items ─────────────────────────────
 
-  private createCollectible(kind: 'coin' | 'crystal' | 'key', x: number, y: number): View {
+  private createCollectible(item: Collectible): View {
+    const { kind, x, y, index } = item;
     const pal = this.pal;
     const root = new THREE.Group();
     const holder = new THREE.Group();
     root.add(holder);
-    root.position.set(0, y * S, zOf(x));
+    root.position.set(item.lane * LANE_M, y * S, zOf(x));
     if (kind === 'coin') {
       const coin = instance('coin', { height: 0.72 });
       remapMaterials(coin, (m) =>
@@ -840,11 +912,10 @@ export class LevelObjects {
       holder.add(key);
       root.add(sprite(pal.glowSprite(0xffd36b, 0.8), 1.8));
     }
-    const index = this.session.collectibles.findIndex((c) => c.x === x && c.y === y && c.kind === kind && c.side === this.style.side);
     return {
       obj: root,
       update: (t) => {
-        root.visible = index < 0 || !this.session.collected[index];
+        root.visible = !this.session.collected[index];
         if (this.style.reducedMotion) return;
         holder.rotation.y = t * 3 + x * 0.01;
         holder.position.y = Math.sin(t * 4 + x * 0.02) * 0.08;
@@ -888,27 +959,36 @@ export class LevelObjects {
         };
       }
       case 'plate': {
-        const disc = new THREE.Mesh(this.geometry('plate', () => new THREE.CylinderGeometry(0.9, 1, 0.12, 40)), pal.get('plate', () => new THREE.MeshStandardMaterial({ color: 0x2a2a3a, metalness: 0.6, roughness: 0.3 })));
-        disc.position.y = 0.06;
-        root.add(disc);
-        const ring = new THREE.Mesh(this.geometry('plate-ring', () => new THREE.RingGeometry(0.55, 0.85, 40)), own(mine, pal.get(`plate-ring-${accent}`, () => new THREE.MeshBasicMaterial({ color: accent, toneMapped: false, side: THREE.DoubleSide }))));
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.y = 0.13;
-        root.add(ring);
-        const glowDisc = new THREE.Mesh(this.geometry('plate-glow', () => new THREE.PlaneGeometry(3.4, 3.4)), own(mine, pal.get(`plate-glow-${accent}`, () => glowMaterial(accent, 0.7, glowTexture()))));
-        glowDisc.rotation.x = -Math.PI / 2;
-        glowDisc.position.y = 0.14;
-        root.add(glowDisc);
+        // A plate fires in any lane: one pad per lane, sharing their materials.
+        const ringMat = own(mine, pal.get(`plate-ring-${accent}`, () => new THREE.MeshBasicMaterial({ color: accent, toneMapped: false, side: THREE.DoubleSide })));
+        const glowMat = own(mine, pal.get(`plate-glow-${accent}`, () => glowMaterial(accent, 0.7, glowTexture())));
+        const discs: THREE.Mesh[] = [];
+        const glows: THREE.Mesh[] = [];
+        for (const cx of LANE_XS) {
+          const disc = new THREE.Mesh(this.geometry('plate', () => new THREE.CylinderGeometry(0.8, 0.9, 0.12, 40)), pal.get('plate', () => new THREE.MeshStandardMaterial({ color: 0x2a2a3a, metalness: 0.6, roughness: 0.3 })));
+          disc.position.set(cx, 0.06, 0);
+          root.add(disc);
+          discs.push(disc);
+          const ring = new THREE.Mesh(this.geometry('plate-ring', () => new THREE.RingGeometry(0.5, 0.76, 40)), ringMat);
+          ring.rotation.x = -Math.PI / 2;
+          ring.position.set(cx, 0.13, 0);
+          root.add(ring);
+          const glowDisc = new THREE.Mesh(this.geometry('plate-glow', () => new THREE.PlaneGeometry(2.2, 2.2)), glowMat);
+          glowDisc.rotation.x = -Math.PI / 2;
+          glowDisc.position.set(cx, 0.14, 0);
+          root.add(glowDisc);
+          glows.push(glowDisc);
+        }
         return {
           obj: root,
           own: mine,
           update: (t) => {
             const o = on();
             const c = o ? 0x3bb273 : accent;
-            (ring.material as THREE.MeshBasicMaterial).color.set(c);
-            (glowDisc.material as THREE.MeshBasicMaterial).color.set(c);
-            disc.position.y = o ? 0.02 : 0.06;
-            if (!this.style.reducedMotion) glowDisc.scale.setScalar(1 + 0.08 * Math.sin(t * 4));
+            ringMat.color.set(c);
+            (glowMat as THREE.MeshBasicMaterial).color.set(c);
+            for (const d of discs) d.position.y = o ? 0.02 : 0.06;
+            if (!this.style.reducedMotion) for (const g of glows) g.scale.setScalar(1 + 0.08 * Math.sin(t * 4));
           },
         };
       }
@@ -971,7 +1051,9 @@ export class LevelObjects {
       own: mine,
       update: (t) => {
         const used = !exit && this.session.portalsUsed[index] === 1;
-        root.scale.setScalar(used ? 0.85 : 1);
+        const k = used ? 0.85 : 1;
+        // Phase portals work in every lane, so they are stretched across the whole road.
+        root.scale.set(exit ? k : k * 1.35, k, k);
         (inner.material as THREE.MeshBasicMaterial).opacity = used ? 0.2 : 0.6;
         if (!this.style.reducedMotion) inner.rotation.z = -t * 1.8;
       },

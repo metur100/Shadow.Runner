@@ -22,7 +22,7 @@ store/
 | --- | --- |
 | App name | Twinshade (store name "Twinshade: Two Worlds Runner") |
 | Android package / iOS bundle ID | `com.certidevelopment.shadowrunner` |
-| Version | 1.0.0 (Android versionCode 4, iOS buildNumber 4) |
+| Version | 1.0.0 (Android versionCode 5, iOS buildNumber 5) |
 | Expo project | `@certi-development/shadow-runner` (ID `9b1c9adc-0803-4024-a167-b37429a1d734`) |
 
 ---
@@ -43,7 +43,7 @@ The package ID `com.certidevelopment.shadowrunner` and the Expo slug stay the sa
 
 1. In **Main store listing**, change the app name to *Twinshade: Two Worlds Runner* in **every** language listing, including en-GB, which the rejection named.
 2. Paste the new descriptions and upload the new feature graphic.
-3. Upload the versionCode 4 AAB.
+3. Upload the versionCode 5 AAB.
 4. Send the changes for review from **Publishing overview**.
 
 ## 0. Website, privacy policy and support URL
@@ -68,7 +68,7 @@ eas build -p android --profile production
 
 The AAB is signed with the upload key from `credentials.json` (local credentials).
 
-The 1.0.0 (4) bundle (renamed to Twinshade) is in `store/builds/twinshade-1.0.0-4.aab`.
+The 1.0.0 (5) bundle (Twinshade with three lanes) is in `store/builds/twinshade-1.0.0-5.aab`.
 
 ### First upload (must be done by hand once)
 

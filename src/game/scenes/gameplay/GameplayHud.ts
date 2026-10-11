@@ -23,6 +23,7 @@ export interface HudOptions {
   onSwitch(): void;
   onJump(): void;
   onSlide(): void;
+  onLane(dir: -1 | 1): void;
 }
 
 const GLASS = 0x0d0a24;
@@ -37,8 +38,8 @@ function pill(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h
 /**
  * Everything floating over the two worlds, kept light so the worlds stay in view: distance (and level
  * progress) top left, coins and pause top right, crystals at the top of the shadow world, the world
- * labels, the switch button on the seam, translucent jump / slide buttons in the bottom corner
- * (mirrored in left-handed mode), toasts, banners and the light-ahead warning.
+ * labels, the switch button on the seam, translucent jump / slide buttons in one bottom corner and lane
+ * buttons in the other (mirrored in left-handed mode), toasts, banners and the light-ahead warning.
  */
 export class GameplayHud {
   readonly switchButton: ActiveFormIndicator;
@@ -60,6 +61,8 @@ export class GameplayHud {
   private warningOn = false;
   private readonly jumpButton: Button;
   private readonly slideButton: Button;
+  private readonly leftButton: Button;
+  private readonly rightButton: Button;
   private readonly hint: Phaser.GameObjects.Text;
 
   constructor(
@@ -131,9 +134,10 @@ export class GameplayHud {
     const bb = layout.buttonsBottom;
     this.jumpButton = new Button(scene, { x: 0, y: bb - 148, width: 112, height: 100, radius: 28, icon: 'jump', label: 'Jump', variant: 'hud', fontSize: 20, onClick: opts.onJump });
     this.slideButton = new Button(scene, { x: 0, y: bb - 40, width: 112, height: 80, radius: 28, icon: 'slide', label: 'Slide', variant: 'hud', fontSize: 20, onClick: opts.onSlide });
-    this.jumpButton.setDepth(60).setAlpha(0.85);
-    this.slideButton.setDepth(60).setAlpha(0.85);
-    this.hint = addText(scene, W / 2, layout.shadowTop + layout.laneH * 0.42, 'Tap anywhere to switch  ·  Swipe ↑ jump  ·  Swipe ↓ slide', {
+    this.leftButton = new Button(scene, { x: 0, y: bb - 40, width: 100, height: 80, radius: 28, icon: 'laneLeft', label: 'Left', variant: 'hud', fontSize: 18, onClick: () => opts.onLane(-1) });
+    this.rightButton = new Button(scene, { x: 0, y: bb - 40, width: 100, height: 80, radius: 28, icon: 'laneRight', label: 'Right', variant: 'hud', fontSize: 18, onClick: () => opts.onLane(1) });
+    for (const b of [this.jumpButton, this.slideButton, this.leftButton, this.rightButton]) b.setDepth(60).setAlpha(0.85);
+    this.hint = addText(scene, W / 2, layout.shadowTop + layout.laneH * 0.42, 'Tap anywhere to switch  ·  Swipe ↑ jump  ·  ↓ slide  ·  ← → change lanes', {
       size: 19,
       weight: '600',
       color: '#ffffff',
@@ -144,12 +148,14 @@ export class GameplayHud {
     this.setLeftHanded(opts.leftHanded);
   }
 
-  /** Left-handed mode puts the jump / slide buttons on the left. */
+  /** Left-handed mode puts the jump / slide buttons on the left and the lane buttons on the right. */
   setLeftHanded(left: boolean): void {
     const W = this.scene.W;
     const sideX = left ? 80 : W - 80;
     this.jumpButton.x = sideX;
     this.slideButton.x = sideX;
+    this.leftButton.x = left ? W - 190 : 74;
+    this.rightButton.x = left ? W - 74 : 190;
   }
 
   private laneLabel(form: Form, y: number): Phaser.GameObjects.Container {

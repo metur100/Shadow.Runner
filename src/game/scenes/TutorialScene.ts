@@ -7,19 +7,21 @@ import { drawIcon, type IconName } from '../ui/Icons';
 import { addText } from '../ui/Typography';
 import { COLORS } from '../utils/Constants';
 import { announce } from './BaseScene';
-import { GameplayScene, type GameplayData } from './GameplayScene';
+import { GameplayScene, type GameplayData, type PlayerAction } from './GameplayScene';
 
 const ACTION_HINT: Record<TutorialStep['action'], { icon: IconName; text: string }> = {
   none: { icon: 'hand', text: 'Tap to continue' },
   switch: { icon: 'swap', text: 'Tap anywhere (or press Tab)' },
   jump: { icon: 'jump', text: 'Swipe up (or press Space)' },
   slide: { icon: 'slide', text: 'Swipe down (or press ↓)' },
+  left: { icon: 'laneLeft', text: 'Swipe left (or press ←)' },
+  right: { icon: 'laneRight', text: 'Swipe right (or press →)' },
 };
 
 /**
  * The interactive tutorial: a real run where time freezes at each step until the player performs the
- * action it teaches – first the two worlds, then switching, light, jumping, sliding and a cross-world
- * lever.
+ * action it teaches – first the two worlds, then changing lanes, switching, light, jumping, sliding and a
+ * cross-world lever.
  */
 export class TutorialScene extends GameplayScene {
   private stepIndex = 0;
@@ -70,7 +72,7 @@ export class TutorialScene extends GameplayScene {
     return this.done;
   }
 
-  protected override allowAction(action: 'switch' | 'jump' | 'slide' | 'tap'): boolean {
+  protected override allowAction(action: PlayerAction): boolean {
     if (this.frozen) return false;
     const step = this.waiting;
     if (!step) return true;
@@ -81,7 +83,9 @@ export class TutorialScene extends GameplayScene {
     const matches =
       (step.action === 'switch' && (action === 'switch' || action === 'tap')) ||
       (step.action === 'jump' && action === 'jump') ||
-      (step.action === 'slide' && action === 'slide');
+      (step.action === 'slide' && action === 'slide') ||
+      (step.action === 'left' && action === 'left') ||
+      (step.action === 'right' && action === 'right');
     if (!matches) {
       this.nudge();
       return false;
@@ -132,7 +136,11 @@ export class TutorialScene extends GameplayScene {
     }
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 180 });
-    if (!GameContext.reducedMotion) this.tweens.add({ targets: ig, y: step.action === 'slide' ? 6 : -6, duration: 420, yoyo: true, repeat: -1 });
+    if (!GameContext.reducedMotion) {
+      const sideways = step.action === 'left' || step.action === 'right';
+      const shift = step.action === 'slide' || step.action === 'right' ? 6 : -6;
+      this.tweens.add({ targets: ig, ...(sideways ? { x: shift } : { y: shift }), duration: 420, yoyo: true, repeat: -1 });
+    }
     this.prompt = c;
     announce(`${step.text} ${hint.text}`);
   }

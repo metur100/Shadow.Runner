@@ -36,6 +36,20 @@ export const BODY = {
   slideHeight: 36,
 } as const;
 
+/**
+ * The road has three lanes (−1 left, 0 middle, 1 right) shared by both forms. Lateral positions are in
+ * lane units: 1 = one lane width.
+ */
+export const LANES = {
+  /** Lane width in world units (the 6.4 m road split in three). */
+  width: 90,
+  /** Seconds to move one lane sideways. */
+  changeTime: 0.15,
+  /** A lane obstacle hits the body while the lateral distance is below this (lane units). */
+  hit: 0.55,
+  /** Items are picked up while the lateral distance is below this (lane units). */
+  pickup: 0.6,
+} as const;
 
 export const SWITCH_COOLDOWN = 0.25;
 

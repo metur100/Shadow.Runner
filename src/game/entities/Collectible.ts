@@ -1,4 +1,4 @@
-import type { CollectibleDef, CollectibleKind, Side } from '../levels/LevelDefinition';
+import type { CollectibleDef, CollectibleKind, Lane, Side } from '../levels/LevelDefinition';
 
 /** Pickup radius around an item's centre (world units). */
 export const PICKUP_RADIUS = 30;
@@ -12,6 +12,7 @@ export class Collectible {
   readonly side: Side;
   readonly x: number;
   readonly y: number;
+  readonly lane: Lane;
   readonly id: string;
 
   constructor(
@@ -22,6 +23,7 @@ export class Collectible {
     this.side = def.side;
     this.x = def.x;
     this.y = def.y;
+    this.lane = def.lane ?? 0;
     this.id = def.id ?? `item-${index}`;
   }
 

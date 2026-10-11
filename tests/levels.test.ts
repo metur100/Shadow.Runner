@@ -71,7 +71,7 @@ describe('interactive tutorial', () => {
   it('answering every prompt right away finishes the tutorial without damage', () => {
     const level = buildTutorialLevel();
     const steps = level.tutorialSteps ?? [];
-    expect(steps.map((s) => s.action)).toEqual(expect.arrayContaining(['switch', 'jump', 'slide', 'none']));
+    expect(steps.map((s) => s.action)).toEqual(expect.arrayContaining(['switch', 'jump', 'slide', 'left', 'right', 'none']));
     const s = new RunSession(level);
     let i = 0;
     for (let n = 0; n < 60 * 120 && s.state !== 'complete'; n++) {
@@ -81,6 +81,8 @@ describe('interactive tutorial', () => {
         if (step.action === 'switch') s.switchForm();
         if (step.action === 'jump') s.jump(0.25);
         if (step.action === 'slide') s.slide();
+        if (step.action === 'left') s.moveLane(-1);
+        if (step.action === 'right') s.moveLane(1);
         if (step.form) expect(s.active).toBe(step.form);
       }
       s.step(1 / 60);

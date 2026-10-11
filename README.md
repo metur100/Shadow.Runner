@@ -36,7 +36,7 @@ npm run smoke -- "http://localhost:4173/?debug"    # same against the production
 It plays like a user, with real pointer events:
 
 - loading screen and the interactive tutorial (taps and swipes)
-- level 1: both forms run, tapping and the switch button change form, swipes jump and slide, Space jumps
+- level 1: both forms run, tapping and the switch button change form, swipes jump, slide and change lanes, Space jumps, the arrow keys change lanes
 - finishing the level, the results screen and Next level
 - reloading the page: progress must be kept
 - targeted checks: the physical self crashes into walls, the shadow passes through shadow walls, light destroys the shadow, a lever opens a gate in the other world, a portal swaps the form
@@ -57,7 +57,9 @@ It fails on any console error and on any request to another host. Screenshots go
 | Tap the character | Use a switch within reach (otherwise switch form) |
 | Swipe up | Jump. A longer swipe jumps higher |
 | Swipe down | Slide; in the air, drop quickly |
-| On-screen Jump / Slide buttons | Same as the swipes; left-handed mode moves them to the left |
+| Swipe left / right | Change lanes (left, middle, right); works in the air too |
+| On-screen Jump / Slide and Left / Right buttons | Same as the swipes; left-handed mode swaps their corners |
+| ← / A and → / D | Change lanes |
 | Space / ↑ / W | Jump; hold for a higher jump |
 | ↓ / S | Slide |
 | Tab / Shift / X | Switch form |
@@ -71,7 +73,9 @@ Touch, mouse and trackpad all work, because all pointer input goes through the s
 
 ### The two forms
 
-Both forms share their horizontal position and run forward automatically. Each has its own vertical motion: jumping (with coyote time, a jump buffer and variable height), sliding and falling.
+Both forms share their position along the run and their lane, and run forward automatically. The road has three lanes (left, middle, right); a swipe moves both forms one lane sideways in 0.15 s. Each form has its own vertical motion: jumping (with coyote time, a jump buffer and variable height), sliding and falling.
+
+Lane obstacles (barriers, spikes, crates, oncoming cars) block only their lane: dodge sideways or, where they are low enough, jump them. Walls, light, lasers, gates, pits and ceilings span the whole road: those are about choosing the right form, jumping or sliding.
 
 Only the **active** form is solid. It:
 

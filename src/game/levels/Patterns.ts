@@ -3,6 +3,7 @@ import type {
   EclipseZone,
   Form,
   InteractionDef,
+  Lane,
   LevelDefinition,
   ObstacleDef,
   PortalDef,
@@ -15,8 +16,8 @@ import type {
 /**
  * Pattern builder for handcrafted levels. A level is written as an ordered list of patterns
  * ("a tall wall", "a lever that opens a shadow gate", …). Each pattern is self-contained: it fills both
- * lanes over its own stretch, so any pattern can follow any other, and checkpoints are only placed in
- * the empty run-up between patterns.
+ * worlds over its own stretch and never needs a particular lane on entry, so any pattern can follow any
+ * other, and checkpoints are only placed in the empty run-up between patterns.
  *
  * The builder also records which form each pattern requires, which gives the level's minimum number
  * of switches (`parSwitches`) for the efficiency score.
@@ -35,6 +36,7 @@ export class LevelBuilder {
   spacing = 520;
   par = 0;
   private uid = 0;
+  private laneTurn = 0;
   private formNow: Form;
 
   constructor(readonly startForm: Form = 'real') {
@@ -68,22 +70,42 @@ export class LevelBuilder {
     return def;
   }
 
-  item(kind: CollectibleDef['kind'], side: Side, x: number, y = 40, id?: string): void {
-    this.collectibles.push({ kind, side, x, y, id });
+  /**
+   * Deterministic lane choice for lane patterns. The free lane wanders, so consecutive lane patterns ask
+   * for real moves; `avoid` gives a lane different from the previous one.
+   */
+  pickLane(avoid?: Lane): Lane {
+    const order: Lane[] = [-1, 1, 0, 1, -1, 0, 1, -1];
+    let lane = order[this.laneTurn++ % order.length];
+    if (lane === avoid) lane = order[this.laneTurn++ % order.length];
+    return lane;
+  }
+
+  item(kind: CollectibleDef['kind'], side: Side, x: number, y = 40, id?: string, lane?: Lane): void {
+    this.collectibles.push({ kind, side, x, y, id, lane });
   }
 
   /** A row of coins (reality) or crystals (shadow). */
-  row(side: Side, x0: number, n: number, step = 70, y = 40): void {
-    for (let i = 0; i < n; i++) this.item(side === 'real' ? 'coin' : 'crystal', side, x0 + i * step, y);
+  row(side: Side, x0: number, n: number, step = 70, y = 40, lane?: Lane): void {
+    for (let i = 0; i < n; i++) this.item(side === 'real' ? 'coin' : 'crystal', side, x0 + i * step, y, undefined, lane);
+  }
+
+  /** A row that weaves across the lanes in groups of three items: middle, left, middle, right … */
+  weave(side: Side, x0: number, n: number, step = 90, mirror = false): void {
+    const path: Lane[] = [0, -1, 0, 1];
+    for (let i = 0; i < n; i++) {
+      const lane = path[Math.floor(i / 3) % path.length];
+      this.item(side === 'real' ? 'coin' : 'crystal', side, x0 + i * step, 40, undefined, (mirror ? -lane : lane) as Lane);
+    }
   }
 
   /** Items along a jump arc centred on `cx`. */
-  arc(side: Side, cx: number, n = 5, peak = 150, spread = 240): void {
+  arc(side: Side, cx: number, n = 5, peak = 150, spread = 240, lane?: Lane): void {
     for (let i = 0; i < n; i++) {
       const f = n === 1 ? 0.5 : i / (n - 1);
       const x = cx - spread / 2 + f * spread;
       const y = 40 + Math.sin(f * Math.PI) * (peak - 40);
-      this.item(side === 'real' ? 'coin' : 'crystal', side, x, y);
+      this.item(side === 'real' ? 'coin' : 'crystal', side, x, y, undefined, lane);
     }
   }
 
@@ -101,11 +123,11 @@ const kindFor = (s: Side) => (s === 'real' ? 'coin' : 'crystal');
 
 // ───────────────────────────── basic patterns (First Light) ─────────────────────────────
 
-/** Empty run with a row of collectibles in one or both worlds. */
+/** Empty run with collectibles weaving across the lanes in one or both worlds. */
 export function run(b: LevelBuilder, len = 600, items: Side | 'both' | 'none' = 'real'): void {
   const n = Math.floor(len / 90);
-  if (items === 'real' || items === 'both') b.row('real', b.x + 60, n, 90);
-  if (items === 'shadow' || items === 'both') b.row('shadow', b.x + 60, n, 90);
+  if (items === 'real' || items === 'both') b.weave('real', b.x + 60, n, 90);
+  if (items === 'shadow' || items === 'both') b.weave('shadow', b.x + 60, n, 90, items === 'both');
   b.x += len;
 }
 
@@ -630,6 +652,84 @@ export function silhouette(b: LevelBuilder): void {
   b.x = x + 240;
 }
 
+// ───────────────────────────── lanes ─────────────────────────────
+
+const ALL_LANES: Lane[] = [-1, 0, 1];
+
+/** Tall barriers in every lane but `free`, in both worlds at once. */
+function barrierRow(b: LevelBuilder, x: number, free: Lane, w = 70): void {
+  for (const lane of ALL_LANES) {
+    if (lane === free) continue;
+    b.obstacle({ kind: 'wall', side: 'real', x, w, h: 300, lane, style: 'barrier' });
+    b.obstacle({ kind: 'wall', side: 'shadow', x, w, h: 300, lane, style: 'barrier' });
+  }
+}
+
+/** Two lanes blocked in both worlds: whichever form you are, move to the free lane. */
+export function laneBlock(b: LevelBuilder): void {
+  const x = b.x + 160;
+  const free = b.pickLane();
+  barrierRow(b, x, free);
+  b.row('real', x - 170, 4, 70, 40, free);
+  b.row('shadow', x - 170, 4, 70, 40, free);
+  b.x = x + 70 + 140;
+}
+
+/** Three barrier rows in a row, each with a different free lane: weave left and right. */
+export function slalom(b: LevelBuilder, n = 3, gap = 360): void {
+  let x = b.x + 160;
+  let free = b.pickLane();
+  for (let i = 0; i < n; i++) {
+    barrierRow(b, x, free);
+    b.row('real', x - 120, 2, 60, 40, free);
+    b.row('shadow', x - 120, 2, 60, 40, free);
+    free = b.pickLane(free);
+    x += gap;
+  }
+  b.x = x - gap + 70 + 140;
+}
+
+/** Spikes in two lanes: dodge into the free lane, or jump them for the coins above. */
+export function laneSpikes(b: LevelBuilder, side: Side = 'real'): void {
+  const x = b.x + 100;
+  const w = 110;
+  const free = b.pickLane();
+  for (const lane of ALL_LANES) {
+    if (lane !== free) b.obstacle({ kind: 'spikes', side, x, w, lane, style: side === 'shadow' ? 'dark' : undefined });
+  }
+  b.arc(side, x + w / 2, 5, 170, 240, free === 0 ? 1 : 0);
+  b.x = x + w + 140;
+}
+
+/** Crates in two lanes and a tall barrier in the third: pick a crate lane and jump. */
+export function laneCrates(b: LevelBuilder): void {
+  const x = b.x + 120;
+  const blocked = b.pickLane();
+  for (const lane of ALL_LANES) {
+    if (lane === blocked) b.obstacle({ kind: 'wall', side: 'real', x: x - 7, w: 70, h: 300, lane, style: 'barrier' });
+    else b.obstacle({ kind: 'wall', side: 'real', x, w: 56, h: 64, lane, style: 'crate' });
+  }
+  b.arc('real', x + 28, 3, 175, 150, blocked === 0 ? -1 : 0);
+  b.x = x + 56 + 150;
+}
+
+/** Oncoming cars in single lanes of both worlds: dodge into a free lane. */
+export function traffic(b: LevelBuilder, n = 3): void {
+  const trigger = 720;
+  let x = b.x + 260;
+  let lane = b.pickLane();
+  for (let i = 0; i < n; i++) {
+    b.obstacle({ kind: 'train', side: 'real', x: x + 320, w: 170, h: 220, speed: 260, trigger, lane, style: 'car' });
+    b.obstacle({ kind: 'train', side: 'shadow', x: x + 320, w: 170, h: 220, speed: 260, trigger, lane, style: 'car' });
+    const safe: Lane = lane === 0 ? (i % 2 === 0 ? 1 : -1) : 0;
+    b.row('real', x - 100, 3, 70, 40, safe);
+    b.row('shadow', x - 100, 3, 70, 40, safe);
+    lane = b.pickLane(lane);
+    x += 440;
+  }
+  b.x = x + 120;
+}
+
 // ───────────────────────────── level assembly ─────────────────────────────
 
 export type PatternFn = (b: LevelBuilder) => void;
@@ -695,6 +795,12 @@ export const PATTERNS = {
   eclipse: (b: LevelBuilder) => eclipse(b),
   movingGate,
   silhouette,
+  laneBlock,
+  slalom: (b: LevelBuilder) => slalom(b),
+  laneSpikes: (b: LevelBuilder) => laneSpikes(b, 'real'),
+  laneDarkSpikes: (b: LevelBuilder) => laneSpikes(b, 'shadow'),
+  laneCrates,
+  traffic: (b: LevelBuilder) => traffic(b),
 } satisfies Record<string, PatternFn>;
 
 export type PatternName = keyof typeof PATTERNS;

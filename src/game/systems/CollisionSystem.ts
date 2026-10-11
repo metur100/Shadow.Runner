@@ -1,7 +1,7 @@
 import type { Box, Obstacle, ObstacleState } from '../entities/Obstacle';
 import type { RunnerForm } from '../entities/RunnerForm';
 import type { Side } from '../levels/LevelDefinition';
-import { BODY } from '../utils/Constants';
+import { BODY, LANES } from '../utils/Constants';
 import type { Support } from './RunnerSystem';
 
 const CELL = 256;
@@ -14,8 +14,11 @@ export const NEAR_MISS_MARGIN = 22;
  * Spatial index over the obstacles of each world plus the collision queries the session needs:
  * what a form stands on, what kills it, and what it narrowly avoided. Obstacles are bucketed into
  * 256-unit cells over the whole range they can ever occupy, so each query only looks at a handful.
+ * Obstacles in one lane only count while the runner's lateral position `lx` is close to that lane.
  */
 export class CollisionSystem {
+  /** Runner's lateral position (lane units), kept up to date by the session. */
+  lx = 0;
   private readonly cells: Record<Side, Obstacle[][]> = { real: [], shadow: [] };
   private states: ObstacleState[] = [];
   private readonly box: Box = { x0: 0, x1: 0, y0: 0, y1: 0 };
@@ -64,7 +67,7 @@ export class CollisionSystem {
     for (const o of this.near(side, x)) {
       if (o.kind !== 'platform') continue;
       const state = this.states[o.index];
-      if (!o.isActive(t, state)) continue;
+      if (!o.isActive(t, state) || !this.inLane(o, 0)) continue;
       const px = o.platformX(t, state);
       if (x + BODY.halfWidth - 4 < px || x - BODY.halfWidth + 4 > px + o.w) continue;
       const top = o.platformTop(t, state);
@@ -105,7 +108,13 @@ export class CollisionSystem {
     return count;
   }
 
+  /** Whether the runner is laterally inside the obstacle's lane (always true for whole-road obstacles). */
+  private inLane(o: Obstacle, margin: number): boolean {
+    return o.lane === null || Math.abs(this.lx - o.lane) < LANES.hit + margin / LANES.width;
+  }
+
   private overlaps(o: Obstacle, x: number, h: number, bodyHeight: number, t: number, margin: number): boolean {
+    if (!this.inLane(o, margin)) return false;
     const shape = o.shape(t, this.states[o.index], this.box);
     if (shape === null) return false;
     const bx0 = x - HIT_HALF_WIDTH - margin;

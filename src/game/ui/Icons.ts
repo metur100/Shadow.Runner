@@ -33,6 +33,8 @@ export type IconName =
   | 'swap'
   | 'jump'
   | 'slide'
+  | 'laneLeft'
+  | 'laneRight'
   | 'coin'
   | 'crystal'
   | 'heart'
@@ -237,6 +239,14 @@ export function drawIcon(g: Phaser.GameObjects.Graphics, name: IconName, x: numb
     case 'slide':
       g.fillTriangle(x, y + s * 0.85, x - s * 0.62, y + s * 0.1, x + s * 0.62, y + s * 0.1);
       g.fillRoundedRect(x - s * 0.22, y - s * 0.7, s * 0.44, s * 0.85, s * 0.08);
+      break;
+    case 'laneLeft':
+      g.fillTriangle(x - s * 0.85, y, x - s * 0.1, y - s * 0.62, x - s * 0.1, y + s * 0.62);
+      g.fillRoundedRect(x - s * 0.15, y - s * 0.22, s * 0.85, s * 0.44, s * 0.08);
+      break;
+    case 'laneRight':
+      g.fillTriangle(x + s * 0.85, y, x + s * 0.1, y - s * 0.62, x + s * 0.1, y + s * 0.62);
+      g.fillRoundedRect(x - s * 0.7, y - s * 0.22, s * 0.85, s * 0.44, s * 0.08);
       break;
     case 'coin':
       g.fillCircle(x, y, s * 0.78);

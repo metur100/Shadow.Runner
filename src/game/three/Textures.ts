@@ -142,14 +142,24 @@ export function roadTextures(style: RoadStyle): { map: THREE.Texture; emissive: 
       }
     }
     if (style.line !== null) {
-      // Dashed centre line, 3 m dash per 8 m, plus solid edge lines.
+      // Dashed lines between the three lanes, 3 m dash per 8 m, plus solid edge lines.
       ctx.fillStyle = css(style.line, 0.92);
-      ctx.fillRect(w / 2 - 6, h * 0.1, 12, h * 0.38);
+      for (const u of [1 / 3, 2 / 3]) ctx.fillRect(w * u - 5, h * 0.1, 10, h * 0.38);
       ctx.fillStyle = css(style.line, 0.75);
       ctx.fillRect(14, 0, 8, h);
       ctx.fillRect(w - 22, 0, 8, h);
       ctx.fillStyle = css(0x000000, 0.15);
       noise(ctx, w, h, r, 1500, [css(0x000000, 0.15)], [1, 3]);
+    } else {
+      // Unpainted roads still show the lanes: a row of pale studs between them.
+      ctx.fillStyle = css(0xffffff, 0.38);
+      for (const u of [1 / 3, 2 / 3]) {
+        for (let y = h * 0.06; y < h; y += h / 4) {
+          ctx.beginPath();
+          ctx.ellipse(w * u, y, 7, 12, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
   });
   map.repeat.set(1, 1);
@@ -183,6 +193,16 @@ export function roadTextures(style: RoadStyle): { map: THREE.Texture; emissive: 
       ctx.moveTo(w - 10, 0);
       ctx.lineTo(w - 10, h);
       ctx.stroke();
+      // Faint glowing dashes between the lanes.
+      ctx.globalAlpha = 0.45;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (const u of [1 / 3, 2 / 3]) {
+        ctx.moveTo(w * u, h * 0.1);
+        ctx.lineTo(w * u, h * 0.48);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     });
   }
   return { map, emissive };

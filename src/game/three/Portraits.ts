@@ -113,7 +113,7 @@ export function worldSnapshot(scene: Phaser.Scene, theme: ThemeId, shadowTheme: 
       detail: true,
       seed: seed + (side === 'real' ? 0 : 1),
     });
-    world.update(40 * 42, 1, 0.3, { anim: 'run', h: 0, solid: true, speed: 7, cheer: false, reducedMotion: true }, true);
+    world.update(40 * 42, 1, 0.3, { anim: 'run', h: 0, lx: 0, solid: true, speed: 7, cheer: false, reducedMotion: true }, true);
     world.setAspect(W / half);
     // Show the lower part of the lane, like the game does.
     world.camera.setViewOffset(W, half / 0.82, 0, (half / 0.82) * 0.12, W, half);

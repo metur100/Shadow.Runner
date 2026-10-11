@@ -3,12 +3,14 @@
  * new level only needs a new `LevelDefinition` (see LevelData.ts and the pattern builder in Patterns.ts).
  *
  * Coordinates: `x` runs along the level in world units. Heights (`y`, `h`) are measured upwards from the
- * ground line of a lane. Each lane belongs to one world ("side"): the reality world (top half of the
- * screen) or the shadow world (bottom half).
+ * ground line. Each world ("side") is the reality world (top half of the screen) or the shadow world
+ * (bottom half). Across the road both worlds have three lanes: `lane` −1 (left), 0 (middle), 1 (right).
+ * Obstacles without a lane span the whole road; collectibles without a lane sit in the middle.
  */
 
 export type Side = 'real' | 'shadow';
 export type Form = Side;
+export type Lane = -1 | 0 | 1;
 
 export const otherSide = (side: Side): Side => (side === 'real' ? 'shadow' : 'real');
 
@@ -75,6 +77,11 @@ export interface ObstacleDef {
   kind: ObstacleKind;
   side: Side;
   x: number;
+  /**
+   * The one lane the obstacle occupies; omitted = the whole road. Pits, shadow walls, light, lasers,
+   * gates and boosts always span the whole road.
+   */
+  lane?: Lane;
   /** Width along the run. */
   w: number;
   /** Bottom edge height (platforms: top surface; blades: centre). */
@@ -108,6 +115,8 @@ export interface CollectibleDef {
   x: number;
   /** Height of the item's centre. */
   y: number;
+  /** Defaults to the middle lane. */
+  lane?: Lane;
 }
 
 export type SwitchKind = 'lever' | 'plate' | 'lamp';
@@ -160,7 +169,7 @@ export interface TutorialStep {
   x: number;
   text: string;
   /** The game waits (time frozen) until the player performs this action. 'none' = tap to continue. */
-  action: 'switch' | 'jump' | 'slide' | 'none';
+  action: 'switch' | 'jump' | 'slide' | 'left' | 'right' | 'none';
   /** Required form after the action (for switch steps). */
   form?: Form;
 }

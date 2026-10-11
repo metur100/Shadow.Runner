@@ -25,6 +25,9 @@ import type { ResultData } from './ResultScene';
 
 export type GameMode = 'campaign' | 'daily' | 'endless' | 'tutorial';
 
+/** Inputs the tutorial can wait for or swallow. */
+export type PlayerAction = 'switch' | 'jump' | 'slide' | 'left' | 'right' | 'tap';
+
 export interface GameplayData {
   mode: GameMode;
   /** Campaign level index. */
@@ -181,6 +184,7 @@ export class GameplayScene extends BaseScene {
       onSwitch: () => this.playerSwitch(),
       onJump: () => this.playerJump(0.6),
       onSlide: () => this.playerSlide(),
+      onLane: (dir) => this.playerLane(dir),
     });
     this.input2 = new RunInput(
       this,
@@ -190,6 +194,7 @@ export class GameplayScene extends BaseScene {
         extendJump: (s) => this.session.extendJump(s),
         releaseJump: () => this.session.releaseJump(),
         slide: () => this.playerSlide(),
+        lane: (dir) => this.playerLane(dir),
         tap: (x, y) => this.playerTap(x, y),
         interact: () => this.playerInteract(),
         pause: () => this.pause(),
@@ -231,7 +236,7 @@ export class GameplayScene extends BaseScene {
   // ───────────────────────────── player actions ─────────────────────────────
 
   /** Hook for the tutorial: return false to swallow the action. */
-  protected allowAction(_action: 'switch' | 'jump' | 'slide' | 'tap'): boolean {
+  protected allowAction(_action: PlayerAction): boolean {
     return !this.frozen;
   }
 
@@ -249,6 +254,12 @@ export class GameplayScene extends BaseScene {
   protected playerSlide(): void {
     if (this.paused || !this.allowAction('slide')) return;
     this.session.slide();
+    this.processEvents();
+  }
+
+  protected playerLane(dir: -1 | 1): void {
+    if (this.paused || !this.allowAction(dir < 0 ? 'left' : 'right')) return;
+    this.session.moveLane(dir);
     this.processEvents();
   }
 
@@ -367,6 +378,7 @@ export class GameplayScene extends BaseScene {
         {
           anim: s.state === 'complete' ? 'idle' : anim,
           h: (form.h * 1) / 42,
+          lx: s.lx,
           solid,
           speed: (s.state === 'running' ? s.speed : 0) / 42,
           cheer: s.state === 'complete',
@@ -437,6 +449,15 @@ export class GameplayScene extends BaseScene {
       case 'switchBlocked':
         AudioManager.switchBlocked();
         break;
+      case 'lane':
+        AudioManager.laneChange(e.lane < s.lx ? -1 : 1);
+        Haptics.play('tap');
+        break;
+      case 'laneBlocked':
+        AudioManager.switchBlocked();
+        this.lanes.real.world.nudge(e.dir);
+        this.lanes.shadow.world.nudge(e.dir);
+        break;
       case 'jump':
         AudioManager.jump(e.form);
         this.dust(e.form, 0xffffff);
@@ -451,7 +472,7 @@ export class GameplayScene extends BaseScene {
       case 'collect': {
         const item = s.collectibles[e.index];
         const lane = this.lanes[e.side];
-        const { x, y } = lane.project(item.x, item.y);
+        const { x, y } = lane.project(item.x, item.y, item.lane);
         if (e.kind === 'coin') AudioManager.coin();
         else if (e.kind === 'crystal') AudioManager.crystal();
         else {
@@ -478,7 +499,7 @@ export class GameplayScene extends BaseScene {
         const o = s.obstacles[e.target];
         const lane = this.lanes[o.side];
         if (this.lastTrigger) {
-          const to = lane.project(o.x, 100);
+          const to = lane.project(o.x, 100, o.lane ?? 0);
           this.effects.link(this.lastTrigger.x, this.lastTrigger.y, to.x, to.y, this.lastTrigger.color);
         }
         break;

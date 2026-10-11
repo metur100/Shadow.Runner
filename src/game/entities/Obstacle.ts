@@ -1,7 +1,9 @@
-import type { ObstacleDef, ObstacleKind, Side } from '../levels/LevelDefinition';
+import type { Lane, ObstacleDef, ObstacleKind, Side } from '../levels/LevelDefinition';
 
 /** Height used for "full height" obstacles (gates, lasers, light) – taller than any jump. */
 export const FULL_HEIGHT = 1200;
+/** Kinds that always span the whole road: their `lane` is ignored. */
+const WHOLE_ROAD = new Set<ObstacleKind>(['pit', 'shadowWall', 'lightZone', 'laser', 'gate', 'boost']);
 const FALL_GRAVITY = 2600;
 
 /** Mutable state of an obstacle. Plain data so the session can snapshot it for checkpoints. */
@@ -37,6 +39,8 @@ export class Obstacle {
   readonly kind: ObstacleKind;
   readonly side: Side;
   readonly x: number;
+  /** Lane the obstacle occupies, or null when it spans the whole road. */
+  readonly lane: Lane | null;
   readonly w: number;
   readonly y: number;
   readonly h: number;
@@ -55,6 +59,7 @@ export class Obstacle {
     this.kind = def.kind;
     this.side = def.side;
     this.x = def.x;
+    this.lane = WHOLE_ROAD.has(def.kind) ? null : (def.lane ?? null);
     this.w = def.w;
     this.y = def.y ?? defaultY(def.kind);
     this.h = def.h ?? defaultH(def.kind);
@@ -76,7 +81,11 @@ export class Obstacle {
       minX -= this.h + 40;
       maxX += this.h + 40;
     }
-    if (this.kind === 'train') maxX += 3000;
+    // Trains drive towards the runner: they can be anywhere up to 3000 units before their start.
+    if (this.kind === 'train') {
+      minX -= 3000;
+      maxX += 3000;
+    }
     this.minX = minX;
     this.maxX = maxX;
   }

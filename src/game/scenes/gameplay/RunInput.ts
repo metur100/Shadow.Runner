@@ -9,6 +9,8 @@ export interface RunInputHandlers {
   extendJump(strength: number): void;
   releaseJump(): void;
   slide(): void;
+  /** One lane left (−1) or right (1). */
+  lane(dir: -1 | 1): void;
   /** A tap that was not a swipe, in design coordinates. */
   tap(x: number, y: number): void;
   interact(): void;
@@ -16,7 +18,7 @@ export interface RunInputHandlers {
   restart(): void;
 }
 
-/** Minimum vertical travel (design units) that counts as a swipe. */
+/** Minimum travel (design units) that counts as a swipe. */
 const SWIPE = 38;
 /** Extra travel after the swipe threshold that gives the full-height jump. */
 const SWIPE_FULL = 110;
@@ -26,8 +28,10 @@ const TAP_TIME = 420;
 /**
  * Gameplay input on top of Phaser's pointer and keyboard events:
  *   touch / mouse / trackpad – tap: switch form (or use a switch next to the character);
- *                              swipe up: jump (longer swipe = higher); swipe down: slide / drop
- *   keyboard                 – Space / ↑ / W jump (hold for higher), ↓ / S slide, Tab / Shift / X switch,
+ *                              swipe up: jump (longer swipe = higher); swipe down: slide / drop;
+ *                              swipe left / right: change lanes
+ *   keyboard                 – Space / ↑ / W jump (hold for higher), ↓ / S slide, ← / A and → / D change lanes,
+ *                              Tab / Shift / X switch,
  *                              E / Enter use a switch, R restart, Esc / P pause
  * Swipes fire as soon as the finger has moved far enough, not on release, so jumps feel immediate.
  * Pointers that start on a UI button are ignored here (the button handles them).
@@ -35,7 +39,7 @@ const TAP_TIME = 420;
 export class RunInput {
   enabled = true;
   private start: { x: number; y: number; time: number; id: number } | null = null;
-  private swiped: 'jump' | 'slide' | null = null;
+  private swiped: 'jump' | 'slide' | 'lane' | null = null;
   private jumpKeyDown = false;
   private jumpKeyTime = 0;
   private readonly onKeyDown: (e: KeyboardEvent) => void;
@@ -87,6 +91,9 @@ export class RunInput {
       } else if (dy > SWIPE && Math.abs(dy) > Math.abs(dx) * 0.7) {
         this.swiped = 'slide';
         this.handlers.slide();
+      } else if (Math.abs(dx) > SWIPE && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        this.swiped = 'lane';
+        this.handlers.lane(dx < 0 ? -1 : 1);
       }
     } else if (this.swiped === 'jump') {
       this.handlers.extendJump(0.25 + Math.min(1, (-dy - SWIPE) / SWIPE_FULL) * 0.75);
@@ -129,6 +136,20 @@ export class RunInput {
       case 'S':
         e.preventDefault();
         if (!e.repeat) this.handlers.slide();
+        break;
+      case 'ArrowLeft':
+      case 'a':
+      case 'A':
+        e.preventDefault();
+        AudioManager.unlock();
+        this.handlers.lane(-1);
+        break;
+      case 'ArrowRight':
+      case 'd':
+      case 'D':
+        e.preventDefault();
+        AudioManager.unlock();
+        this.handlers.lane(1);
         break;
       case 'Tab':
       case 'Shift':

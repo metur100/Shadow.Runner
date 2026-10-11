@@ -205,6 +205,12 @@ class AudioManagerImpl {
     this.burst(this.ctx!.currentTime, 0.3, 'bandpass', 1800, 0.1, 1.2, 600);
   }
 
+  /** A short sideways whoosh (lane change). */
+  laneChange(dir: -1 | 1): void {
+    if (!this.ready()) return;
+    this.burst(this.ctx!.currentTime, 0.14, 'bandpass', dir < 0 ? 1300 : 1600, 0.07, 1.4, dir < 0 ? 900 : 2200);
+  }
+
   land(): void {
     if (!this.ready()) return;
     this.burst(this.ctx!.currentTime, 0.07, 'lowpass', 500, 0.1);

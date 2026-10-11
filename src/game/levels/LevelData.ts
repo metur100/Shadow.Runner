@@ -11,17 +11,17 @@ const RECIPES: LevelRecipe[] = [
   {
     id: 'w1-1', index: 0, worldId: 0, name: 'Morning Run', theme: 'city',
     speed: { start: 320, end: 345 }, duration: 45, spacing: 640, lives: 3, difficulty: 1,
-    tutorialText: 'Swipe up to jump over spikes and crates.',
-    intro: ['run', 'spikes', 'run', 'crate'],
-    loop: ['spikes', 'run', 'crate', 'wideSpikes', 'platforms'],
-    tips: [[1, 'Swipe up (or press Space) to jump']],
+    tutorialText: 'Swipe up to jump. Swipe left or right to change lanes.',
+    intro: ['run', 'spikes', 'laneBlock', 'run', 'crate'],
+    loop: ['spikes', 'run', 'laneBlock', 'crate', 'laneSpikes', 'wideSpikes', 'platforms'],
+    tips: [[1, 'Swipe up (or press Space) to jump'], [2, 'Blocked! Swipe left or right (or press ← →) to change lanes']],
   },
   {
     id: 'w1-2', index: 1, worldId: 0, name: 'Two Worlds', theme: 'city',
     speed: { start: 320, end: 350 }, duration: 48, spacing: 640, lives: 3, difficulty: 1,
     tutorialText: 'Tap to switch. Your shadow walks through walls.',
     intro: ['mixed', 'wall', 'runShadow', 'wall'],
-    loop: ['mixed', 'spikes', 'wall', 'darkSpikes', 'run'],
+    loop: ['mixed', 'spikes', 'wall', 'laneBlock', 'darkSpikes', 'run'],
     tips: [[0, 'Tap to switch – crystals live in the shadow world'], [1, 'Walls stop you. Switch: the shadow passes through']],
   },
   {
@@ -29,7 +29,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 325, end: 355 }, duration: 52, spacing: 620, lives: 3, difficulty: 2,
     tutorialText: 'Light destroys your shadow – be your physical self in the light.',
     intro: ['wall', 'light', 'run'],
-    loop: ['wall', 'darkSpikes', 'light', 'spikes', 'mixed', 'shortLight'],
+    loop: ['wall', 'darkSpikes', 'light', 'laneSpikes', 'mixed', 'shortLight'],
     tips: [[1, 'Light! Switch back before your shadow reaches it']],
   },
   {
@@ -37,7 +37,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 330, end: 360 }, duration: 55, spacing: 600, lives: 3, difficulty: 2,
     tutorialText: 'Swipe down to slide under low barriers.',
     intro: ['ceiling', 'roots', 'wall'],
-    loop: ['ceiling', 'wall', 'roots', 'light', 'crate', 'spikes', 'rock'],
+    loop: ['ceiling', 'wall', 'roots', 'light', 'laneCrates', 'spikes', 'laneBlock', 'rock'],
     tips: [[0, 'Swipe down (or press ↓) to slide']],
   },
   {
@@ -45,7 +45,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 335, end: 365 }, duration: 60, spacing: 580, lives: 3, difficulty: 3,
     tutorialText: 'Jump the gaps between rooftops. Mind the falling crates.',
     intro: ['pit', 'shadowPit', 'wallThenLight'],
-    loop: ['pit', 'wall', 'falling', 'light', 'platforms', 'shadowPit', 'ceiling', 'fallingRock'],
+    loop: ['pit', 'wall', 'falling', 'slalom', 'light', 'platforms', 'shadowPit', 'ceiling', 'fallingRock'],
   },
 
   // ───────── World 2 · Parallel Park ─────────
@@ -54,7 +54,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 340, end: 370 }, duration: 62, spacing: 580, lives: 3, difficulty: 3,
     tutorialText: 'Pull a lever above to open the gate below.',
     intro: ['leverGate', 'run'],
-    loop: ['leverGate', 'spikes', 'light', 'darkSpikes', 'wall', 'mixed'],
+    loop: ['leverGate', 'laneSpikes', 'light', 'darkSpikes', 'wall', 'laneBlock', 'mixed'],
     tips: [[0, 'Run into the lever as your physical self – it opens the shadow gate']],
   },
   {
@@ -62,7 +62,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 340, end: 372 }, duration: 66, spacing: 570, lives: 3, difficulty: 3,
     tutorialText: 'A shadow plate builds the bridge above.',
     intro: ['plateBridge', 'run'],
-    loop: ['plateBridge', 'crate', 'wall', 'light', 'leverGate', 'roots'],
+    loop: ['plateBridge', 'laneCrates', 'wall', 'light', 'leverGate', 'roots'],
     tips: [[0, 'Step on the plate as the shadow, then switch to cross the bridge']],
   },
   {
@@ -70,7 +70,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 345, end: 375 }, duration: 68, spacing: 560, lives: 3, difficulty: 4,
     tutorialText: 'Street lamps light up the shadow world. Don’t bump them.',
     intro: ['lampTrap', 'pulseLight'],
-    loop: ['lampTrap', 'darkSpikes', 'pulseLight', 'wallRun', 'roots', 'mixed'],
+    loop: ['lampTrap', 'laneDarkSpikes', 'pulseLight', 'wallRun', 'slalom', 'roots', 'mixed'],
     tips: [[0, 'Bumping a lamp lights the shadow world – jump it, or pass it as the shadow'], [1, 'Pulsing light: be your physical self']],
   },
   {
@@ -78,14 +78,14 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 345, end: 378 }, duration: 72, spacing: 550, lives: 3, difficulty: 4,
     tutorialText: 'Ride moving platforms across the ponds.',
     intro: ['movingPlatform', 'platformPit'],
-    loop: ['movingPlatform', 'wall', 'platformPit', 'leverGate', 'pulseLight', 'shadowPlatforms'],
+    loop: ['movingPlatform', 'wall', 'platformPit', 'laneBlock', 'leverGate', 'pulseLight', 'shadowPlatforms'],
   },
   {
     id: 'w2-5', index: 9, worldId: 1, name: 'Park After Dark', theme: 'park',
     speed: { start: 350, end: 385 }, duration: 76, spacing: 530, lives: 3, difficulty: 5,
     tutorialText: 'Everything the park has learned, all at once.',
     intro: [],
-    loop: ['leverGate', 'plateBridge', 'lampTrap', 'movingPlatform', 'wallRun', 'pulseLight', 'platforms', 'shadowPlatforms'],
+    loop: ['leverGate', 'plateBridge', 'slalom', 'lampTrap', 'movingPlatform', 'wallRun', 'pulseLight', 'laneSpikes', 'platforms', 'shadowPlatforms'],
   },
 
   // ───────── World 3 · Neon City ─────────
@@ -94,7 +94,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 355, end: 395 }, duration: 70, spacing: 530, lives: 3, difficulty: 5,
     tutorialText: 'Lasers blink on and off. Read the rhythm – or switch.',
     intro: ['laserOff', 'laser'],
-    loop: ['laser', 'crate', 'laserLight', 'wall', 'laserOff', 'spikes'],
+    loop: ['laser', 'laneCrates', 'laserLight', 'wall', 'traffic', 'laserOff', 'spikes'],
     tips: [[1, 'This laser is on – switch to the shadow and jump the spikes']],
   },
   {
@@ -102,30 +102,30 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 360, end: 400 }, duration: 74, spacing: 520, lives: 3, difficulty: 5,
     tutorialText: 'Timed doors and timed levers – keep moving.',
     intro: ['timedDoor', 'timedLever'],
-    loop: ['timedDoor', 'laser', 'timedLever', 'light', 'sign'],
+    loop: ['timedDoor', 'laser', 'laneSpikes', 'timedLever', 'light', 'slalom', 'sign'],
     tips: [[1, 'This lever only holds the gate open for 3 seconds']],
   },
   {
     id: 'w3-3', index: 12, worldId: 2, name: 'Night Express', theme: 'neon',
     speed: { start: 360, end: 402 }, duration: 78, spacing: 520, lives: 3, difficulty: 6,
     tutorialText: 'Trains roar through reality. Be the shadow when they pass.',
-    intro: ['train'],
-    loop: ['train', 'laserLight', 'sign', 'wall', 'timedDoor'],
-    tips: [[0, 'Train incoming – switch to the shadow!']],
+    intro: ['train', 'traffic'],
+    loop: ['train', 'laserLight', 'traffic', 'sign', 'wall', 'timedDoor'],
+    tips: [[0, 'Train incoming – switch to the shadow!'], [1, 'Cars in both worlds! Dodge into a free lane']],
   },
   {
     id: 'w3-4', index: 13, worldId: 2, name: 'Overdrive', theme: 'neon',
     speed: { start: 365, end: 405 }, duration: 80, spacing: 520, lives: 3, difficulty: 6,
     tutorialText: 'Speed sections push you faster. Stay sharp.',
     intro: ['speed'],
-    loop: ['speed', 'laser', 'train', 'wallThenLight', 'sign', 'laserLight'],
+    loop: ['speed', 'laser', 'traffic', 'train', 'wallThenLight', 'slalom', 'sign', 'laserLight'],
   },
   {
     id: 'w3-5', index: 14, worldId: 2, name: 'Neon Signals', theme: 'neon',
     speed: { start: 370, end: 410 }, duration: 85, spacing: 500, lives: 3, difficulty: 6,
     tutorialText: 'The whole city is blinking at you.',
     intro: [],
-    loop: ['sign', 'laser', 'timedLever', 'train', 'speed', 'laserLight', 'timedDoor', 'falling'],
+    loop: ['sign', 'laser', 'traffic', 'timedLever', 'train', 'speed', 'slalom', 'laserLight', 'timedDoor', 'falling'],
   },
 
   // ───────── World 4 · Clockwork District ─────────
@@ -134,14 +134,14 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 370, end: 405 }, duration: 80, spacing: 500, lives: 3, difficulty: 6,
     tutorialText: 'Slide under the spinning gears.',
     intro: ['gear', 'shadowGear'],
-    loop: ['gear', 'wall', 'shadowGear', 'light', 'gearPair', 'blade'],
+    loop: ['gear', 'wall', 'laneSpikes', 'shadowGear', 'light', 'gearPair', 'blade'],
   },
   {
     id: 'w4-2', index: 16, worldId: 3, name: 'Up and Down', theme: 'clockwork',
     speed: { start: 370, end: 408 }, duration: 84, spacing: 500, lives: 3, difficulty: 7,
     tutorialText: 'Elevators rise and fall – some move in both worlds at once.',
     intro: ['elevator', 'syncPlatforms'],
-    loop: ['elevator', 'gearPair', 'syncPlatforms', 'wallThenLight', 'thorn'],
+    loop: ['elevator', 'gearPair', 'slalom', 'syncPlatforms', 'wallThenLight', 'thorn'],
     tips: [[1, 'One plate moves both lifts: up above, down below']],
   },
   {
@@ -149,21 +149,21 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 372, end: 410 }, duration: 88, spacing: 490, lives: 3, difficulty: 7,
     tutorialText: 'Time your jumps over the swinging pendulums.',
     intro: ['pendulum'],
-    loop: ['pendulum', 'gear', 'wall', 'pendulum', 'darkSpikes', 'leverGate'],
+    loop: ['pendulum', 'gear', 'laneCrates', 'wall', 'pendulum', 'laneDarkSpikes', 'leverGate'],
   },
   {
     id: 'w4-4', index: 18, worldId: 3, name: 'Phase Shift', theme: 'clockwork',
     speed: { start: 375, end: 412 }, duration: 90, spacing: 490, lives: 3, difficulty: 7,
     tutorialText: 'Phase platforms blink in and out of the shadow world.',
     intro: ['phasePlatforms'],
-    loop: ['phasePlatforms', 'pendulum', 'elevator', 'shadowGear', 'lampTrap'],
+    loop: ['phasePlatforms', 'pendulum', 'laneBlock', 'elevator', 'shadowGear', 'lampTrap'],
   },
   {
     id: 'w4-5', index: 19, worldId: 3, name: 'Tick Tock', theme: 'clockwork',
     speed: { start: 378, end: 416 }, duration: 95, spacing: 480, lives: 3, difficulty: 8,
     tutorialText: 'Every gear in the district, perfectly in sync.',
     intro: [],
-    loop: ['gearPair', 'pendulum', 'phasePlatforms', 'elevator', 'timedDoor', 'syncPlatforms', 'blade', 'thorn'],
+    loop: ['gearPair', 'pendulum', 'slalom', 'phasePlatforms', 'elevator', 'timedDoor', 'syncPlatforms', 'laneSpikes', 'blade', 'thorn'],
   },
 
   // ───────── World 5 · Sunken Temple ─────────
@@ -172,28 +172,28 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 375, end: 412 }, duration: 90, spacing: 480, lives: 3, difficulty: 7,
     tutorialText: 'Old stones crumble – keep running across them.',
     intro: ['water', 'collapse'],
-    loop: ['water', 'collapse', 'wall', 'light', 'roots', 'water'],
+    loop: ['water', 'collapse', 'laneBlock', 'wall', 'light', 'roots', 'water'],
   },
   {
     id: 'w5-2', index: 21, worldId: 4, name: 'Bridge of Shadows', theme: 'temple',
     speed: { start: 378, end: 414 }, duration: 94, spacing: 480, lives: 3, difficulty: 8,
     tutorialText: 'A lever above raises a bridge in the shadow world.',
     intro: ['shadowBridge'],
-    loop: ['shadowBridge', 'collapse', 'roots', 'wallThenLight', 'water'],
+    loop: ['shadowBridge', 'collapse', 'slalom', 'roots', 'wallThenLight', 'water'],
   },
   {
     id: 'w5-3', index: 22, worldId: 4, name: 'Beam Chamber', theme: 'temple',
     speed: { start: 380, end: 416 }, duration: 96, spacing: 470, lives: 3, difficulty: 8,
     tutorialText: 'Light beams flash between the pillars. Trust the rhythm.',
     intro: ['beams'],
-    loop: ['beams', 'water', 'light', 'beams', 'collapse', 'shadowBridge'],
+    loop: ['beams', 'water', 'laneDarkSpikes', 'light', 'beams', 'collapse', 'shadowBridge'],
   },
   {
     id: 'w5-4', index: 23, worldId: 4, name: 'Mirror Gates', theme: 'temple',
     speed: { start: 382, end: 418 }, duration: 100, spacing: 470, lives: 3, difficulty: 8,
     tutorialText: 'Portals swap you between the worlds. You must go through.',
     intro: ['portal', 'shadowPortal'],
-    loop: ['portal', 'collapse', 'shadowPortal', 'beams', 'water', 'wall'],
+    loop: ['portal', 'collapse', 'slalom', 'shadowPortal', 'beams', 'water', 'wall'],
     tips: [[0, 'Run through the portal as your physical self – it turns you into the shadow']],
   },
   {
@@ -201,7 +201,7 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 385, end: 420 }, duration: 105, spacing: 460, lives: 3, difficulty: 9,
     tutorialText: 'A key from the shadow world opens the temple door.',
     intro: ['keyDoor'],
-    loop: ['keyDoor', 'portal', 'shadowBridge', 'collapse', 'beams', 'water'],
+    loop: ['keyDoor', 'portal', 'laneCrates', 'shadowBridge', 'collapse', 'beams', 'water'],
   },
 
   // ───────── World 6 · The Eclipse ─────────
@@ -210,14 +210,14 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 385, end: 425 }, duration: 100, spacing: 440, lives: 3, difficulty: 8,
     tutorialText: 'Walls and lights, faster and faster.',
     intro: ['fastSwitch', 'multiLight'],
-    loop: ['fastSwitch', 'multiLight', 'silhouette', 'wall', 'darkSpikes'],
+    loop: ['fastSwitch', 'multiLight', 'traffic', 'silhouette', 'wall', 'laneDarkSpikes'],
   },
   {
     id: 'w6-2', index: 26, worldId: 5, name: 'Merging', theme: 'eclipse',
     speed: { start: 388, end: 430 }, duration: 105, spacing: 440, lives: 3, difficulty: 9,
     tutorialText: 'In the eclipse both forms are real – and both jump together.',
     intro: ['eclipse'],
-    loop: ['eclipse', 'fastSwitch', 'multiLight', 'movingGate'],
+    loop: ['eclipse', 'fastSwitch', 'slalom', 'multiLight', 'movingGate'],
     tips: [[0, 'Eclipse! Both of you are solid now – jump and slide together']],
   },
   {
@@ -225,21 +225,21 @@ const RECIPES: LevelRecipe[] = [
     speed: { start: 390, end: 435 }, duration: 110, spacing: 430, lives: 3, difficulty: 9,
     tutorialText: 'Gates slide open and shut. Arrive at the right moment.',
     intro: ['movingGate'],
-    loop: ['movingGate', 'fasterSwitch', 'eclipse', 'keyDoor', 'silhouette'],
+    loop: ['movingGate', 'fasterSwitch', 'traffic', 'eclipse', 'keyDoor', 'silhouette'],
   },
   {
     id: 'w6-4', index: 28, worldId: 5, name: 'Totality', theme: 'eclipse',
     speed: { start: 392, end: 440 }, duration: 115, spacing: 420, lives: 2, difficulty: 10,
     tutorialText: 'Everything you have learned, under a black sun.',
     intro: [],
-    loop: ['fasterSwitch', 'eclipse', 'portal', 'train', 'movingGate', 'multiLight', 'collapse', 'pendulum'],
+    loop: ['fasterSwitch', 'eclipse', 'slalom', 'portal', 'train', 'movingGate', 'traffic', 'multiLight', 'collapse', 'pendulum'],
   },
   {
     id: 'w6-5', index: 29, worldId: 5, name: 'The Last Light', theme: 'eclipse',
     speed: { start: 395, end: 450 }, duration: 120, spacing: 420, lives: 2, difficulty: 10,
     tutorialText: 'The eclipse is chasing you. Run for the great portal!',
     intro: ['speed'],
-    loop: ['fasterSwitch', 'eclipse', 'movingGate', 'train', 'shadowBridge', 'multiLight', 'portal', 'laserLight', 'speed'],
+    loop: ['fasterSwitch', 'eclipse', 'traffic', 'movingGate', 'train', 'slalom', 'shadowBridge', 'multiLight', 'portal', 'laserLight', 'speed'],
     chase: true,
   },
 ];
@@ -268,32 +268,47 @@ export function buildTutorialLevel(): LevelDefinition {
   steps.push({ x: 260, text: 'This is you, running through the reality world above.', action: 'none' });
   steps.push({ x: 262, text: 'And this is your shadow, in the shadow world below. You both run together.', action: 'none' });
   run(b, 500, 'real');
-  // 1 · Switch to the shadow for a wall.
-  const wallX = 1700;
+  // 1 · Change lanes: barriers in two lanes of both worlds.
+  const blockA = 1250;
+  steps.push({ x: blockA - 300, text: 'The middle and right lanes are blocked!\nSwipe left to change lanes.', action: 'left' });
+  for (const lane of [0, 1] as const) {
+    b.obstacles.push({ kind: 'wall', side: 'real', x: blockA, w: 70, h: 300, lane, style: 'barrier' }, { kind: 'wall', side: 'shadow', x: blockA, w: 70, h: 300, lane, style: 'barrier' });
+  }
+  b.row('real', blockA - 160, 4, 70, 40, -1);
+  const blockB = 1950;
+  steps.push({ x: blockB - 300, text: 'Now the middle is free.\nSwipe right to move back.', action: 'right' });
+  for (const lane of [-1, 1] as const) {
+    b.obstacles.push({ kind: 'wall', side: 'real', x: blockB, w: 70, h: 300, lane, style: 'barrier' }, { kind: 'wall', side: 'shadow', x: blockB, w: 70, h: 300, lane, style: 'barrier' });
+  }
+  b.row('real', blockB - 160, 4, 70);
+  // Everything after the lane lessons is shifted back by this much.
+  const o = 1100;
+  // 2 · Switch to the shadow for a wall.
+  const wallX = 1700 + o;
   steps.push({ x: wallX - 330, text: 'A wall! Only your shadow can pass through walls.\nTap anywhere to switch.', action: 'switch', form: 'shadow' });
   b.obstacles.push({ kind: 'wall', side: 'real', x: wallX, w: 70, h: 300 }, { kind: 'shadowWall', side: 'shadow', x: wallX, w: 70, h: 300 });
   b.row('shadow', wallX - 160, 5, 70);
-  // 2 · Back to the physical form for light.
-  const lightX = 2650;
+  // 3 · Back to the physical form for light.
+  const lightX = 2650 + o;
   steps.push({ x: lightX - 340, text: 'Light destroys your shadow.\nTap to switch back to your physical self.', action: 'switch', form: 'real' });
   b.obstacles.push({ kind: 'lightZone', side: 'shadow', x: lightX, w: 300 });
   b.row('real', lightX - 20, 4, 80);
-  // 3 · Jump.
-  const spikesX = 3500;
+  // 4 · Jump.
+  const spikesX = 3500 + o;
   // The jump starts right when the prompt is answered: close enough that even a short hop clears them.
   steps.push({ x: spikesX - 55, text: 'Spikes! Swipe up to jump.', action: 'jump' });
   b.obstacles.push({ kind: 'spikes', side: 'real', x: spikesX, w: 90 });
   b.arc('real', spikesX + 45, 5, 165, 230);
-  // 4 · Slide.
-  const ceilingX = 4300;
+  // 5 · Slide.
+  const ceilingX = 4300 + o;
   steps.push({ x: ceilingX - 20, text: 'Low barrier! Swipe down to slide.', action: 'slide' });
   b.obstacles.push({ kind: 'ceiling', side: 'real', x: ceilingX, w: 120 });
   b.row('real', ceilingX + 20, 2, 70, 18);
-  // 5 · Cross-world switch: the lever above opens the gate below.
-  const leverX = 5100;
+  // 6 · Cross-world switch: the lever above opens the gate below.
+  const leverX = 5100 + o;
   steps.push({ x: leverX - 420, text: 'Switches change the OTHER world.\nRun into the lever to open the gate below.', action: 'none' });
   b.switches.push({ id: 'tlever', kind: 'lever', side: 'real', x: leverX });
-  const gateX = 5800;
+  const gateX = 5800 + o;
   b.obstacles.push({ id: 'tgate', kind: 'gate', side: 'shadow', x: gateX, w: 34 }, { kind: 'wall', side: 'real', x: gateX - 10, w: 60, h: 300 });
   b.interactions.push({ trigger: 'tlever', effects: [{ action: 'open', target: 'tgate' }], description: 'The tutorial lever opens the shadow gate.' });
   steps.push({ x: gateX - 330, text: 'The gate is open! Switch to your shadow to get past the wall.', action: 'switch', form: 'shadow' });
@@ -317,14 +332,14 @@ export function buildTutorialLevel(): LevelDefinition {
     switches: b.switches,
     portals: b.portals,
     interactions: b.interactions,
-    checkpoints: [1250, 2250, 3200, 4000, 4700],
+    checkpoints: [850, 1580, 2350, 3350, 4300, 5100, 5800],
     eclipses: [],
     timeLimit: 300,
     required: 0,
     parSwitches: 3,
     lives: 99,
     difficulty: 1,
-    tutorialText: 'Learn to switch, jump and slide.',
+    tutorialText: 'Learn to change lanes, switch, jump and slide.',
     tutorialSteps: steps,
   };
 }

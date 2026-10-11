@@ -4,9 +4,9 @@ import { Rng } from '../utils/MathUtils';
 
 /** Pattern tiers: endless mode starts with the gentle ones and mixes in harder ones as it goes. */
 const TIERS: PatternName[][] = [
-  ['spikes', 'darkSpikes', 'crate', 'rock', 'wall', 'light', 'ceiling', 'roots', 'mixed', 'pit'],
-  ['leverGate', 'plateBridge', 'pulseLight', 'wallRun', 'shadowPit', 'falling', 'platforms', 'lampTrap'],
-  ['laser', 'laserLight', 'timedDoor', 'train', 'sign', 'gear', 'gearPair', 'movingPlatform'],
+  ['spikes', 'darkSpikes', 'crate', 'rock', 'wall', 'light', 'ceiling', 'roots', 'mixed', 'pit', 'laneBlock', 'laneSpikes'],
+  ['leverGate', 'plateBridge', 'pulseLight', 'wallRun', 'shadowPit', 'falling', 'platforms', 'lampTrap', 'laneCrates', 'slalom'],
+  ['laser', 'laserLight', 'timedDoor', 'train', 'sign', 'gear', 'gearPair', 'movingPlatform', 'traffic', 'laneDarkSpikes'],
   ['elevator', 'pendulum', 'phasePlatforms', 'collapse', 'shadowBridge', 'beams', 'portal', 'keyDoor'],
   ['fastSwitch', 'multiLight', 'eclipse', 'movingGate', 'silhouette', 'fasterSwitch'],
 ];

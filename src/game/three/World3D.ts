@@ -7,7 +7,7 @@ import { LevelObjects } from './LevelObjects';
 import { Renderer3D } from './Renderer3D';
 import { Runner3D, type RunnerVisual } from './Runner3D';
 import { Sky } from './Sky';
-import { S, Street } from './Street';
+import { LANE_M, S, Street } from './Street';
 
 export interface WorldOptions {
   side: Side;
@@ -48,6 +48,10 @@ export class World3D {
   private time = 0;
   private readonly tmp = new THREE.Vector3();
   private shake = 0;
+  /** Camera x: follows the runner across the lanes, a little behind. */
+  private camX = 0;
+  private nudgeTime = 0;
+  private nudgeDir = 0;
 
   constructor(readonly opts: WorldOptions) {
     const env = environment(opts.theme, opts.side);
@@ -111,6 +115,13 @@ export class World3D {
     this.camera.updateProjectionMatrix();
   }
 
+  /** A small sideways bump of the camera (trying to leave the road). */
+  nudge(dir: number): void {
+    if (this.opts.reducedMotion) return;
+    this.nudgeTime = 0.2;
+    this.nudgeDir = dir;
+  }
+
   /** A short camera shake (hits). */
   bump(strength = 1): void {
     if (!this.opts.reducedMotion) this.shake = 0.25 * strength;
@@ -135,7 +146,8 @@ export class World3D {
 
     this.street.update(d);
     this.objects?.update(scroll, t, dt);
-    this.runner.root.position.set(0, 0, z);
+    const rx = visual.lx * LANE_M;
+    this.runner.root.position.set(rx, 0, z);
     this.runner.update(dt, visual, this.groundH);
 
     let sx = 0;
@@ -145,8 +157,14 @@ export class World3D {
       sx = (Math.random() - 0.5) * this.shake;
       sy = (Math.random() - 0.5) * this.shake;
     }
-    this.camera.position.set(sx, CAM_UP + this.lift + sy, z + CAM_BACK);
-    this.camera.lookAt(0, LOOK_UP + this.lift * 0.85, z - LOOK_AHEAD);
+    this.camX += (rx * 0.72 - this.camX) * Math.min(1, dt * 9);
+    let nx = 0;
+    if (this.nudgeTime > 0) {
+      this.nudgeTime = Math.max(0, this.nudgeTime - dt);
+      nx = this.nudgeDir * 0.18 * Math.sin((this.nudgeTime / 0.2) * Math.PI);
+    }
+    this.camera.position.set(this.camX + sx + nx, CAM_UP + this.lift + sy, z + CAM_BACK);
+    this.camera.lookAt(this.camX * 0.6 + nx, LOOK_UP + this.lift * 0.85, z - LOOK_AHEAD);
 
     const castShadow = this.opts.detail && Renderer3D.shadowsEnabled;
     if (this.sun.castShadow !== castShadow) this.sun.castShadow = castShadow;
@@ -163,11 +181,16 @@ export class World3D {
     this.street.reset();
     this.objects?.reset();
     this.lift = 0;
+    this.camX = this.lastRunnerX;
   }
 
-  /** NDC position of a sim point (x units ahead, h units up) in this world's camera. */
-  projectSim(x: number, h: number, out: THREE.Vector3): THREE.Vector3 {
-    return out.set(0, h * S, -x * S).project(this.camera);
+  private get lastRunnerX(): number {
+    return this.runner.root.position.x;
+  }
+
+  /** NDC position of a sim point (x units ahead, h units up, lx lanes across) in this world's camera. */
+  projectSim(x: number, h: number, out: THREE.Vector3, lx = 0): THREE.Vector3 {
+    return out.set(lx * LANE_M, h * S, -x * S).project(this.camera);
   }
 
   dispose(): void {

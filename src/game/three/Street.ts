@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import type { Side } from '../levels/LevelDefinition';
+import { LANES } from '../utils/Constants';
 import type { EnvironmentDef, PropRule } from './Environment';
 import { lit, shadowed, tinted } from './Materials';
 import { instance, remapMaterials, type ModelName } from './Models';
@@ -8,6 +9,8 @@ import { awningTexture, pavingTexture, roadTextures } from './Textures';
 
 /** Metres per simulation unit. */
 export const S = 1 / 42;
+/** Width of one of the three lanes (metres); lane centres are at −LANE_M, 0 and LANE_M. */
+export const LANE_M = LANES.width * S;
 /** Half-width of the carriageway and the x of the building fronts (metres). */
 export const ROAD_HALF = 3.2;
 export const CURB_W = 0.3;

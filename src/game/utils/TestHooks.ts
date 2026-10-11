@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 
 import { GameContext } from '../GameContext';
-import { solveLevel } from '../levels/LevelSolver';
+import { applyAction, solveLevel } from '../levels/LevelSolver';
 import type { BaseScene } from '../scenes/BaseScene';
 import type { GameplayScene } from '../scenes/GameplayScene';
 import { runnerPortrait } from '../three/Portraits';
@@ -67,6 +67,8 @@ export function installTestHooks(game: Phaser.Game): void {
         levelId: s.level.id,
         state: s.state,
         x: s.x,
+        lane: s.lane,
+        lx: s.lx,
         length: s.level.length,
         active: s.active,
         physicalH: s.physical.h,
@@ -90,7 +92,7 @@ export function installTestHooks(game: Phaser.Game): void {
       const s = run()?.session;
       if (!s) return null;
       return {
-        obstacles: s.obstacles.map((o) => ({ kind: o.kind, side: o.side, x: o.x, w: o.w, h: o.h, id: o.def.id ?? null, open: s.obstacleStates[o.index].open, off: s.obstacleStates[o.index].off })),
+        obstacles: s.obstacles.map((o) => ({ kind: o.kind, side: o.side, x: o.x, lane: o.lane, w: o.w, h: o.h, style: o.def.style ?? null, id: o.def.id ?? null, open: s.obstacleStates[o.index].open, off: s.obstacleStates[o.index].off })),
         switches: s.switches.map((w) => ({ id: w.id, kind: w.kind, side: w.side, x: w.x })),
         portals: s.portals.map((p) => ({ id: p.id, side: p.side, x: p.x, kind: p.def.kind })),
       };
@@ -114,10 +116,7 @@ export function installTestHooks(game: Phaser.Game): void {
       let i = 0;
       while (s.x < untilX && s.state === 'running' && i < plan.actions.length) {
         const action = plan.actions[i++];
-        if (action === 'switch' || action === 'switchJump') s.switchForm();
-        if (action === 'jump' || action === 'switchJump') s.jump(0);
-        if (action === 'jumpHigh') s.jump(1);
-        if (action === 'slide') s.slide();
+        applyAction(s, action);
         for (let k = 0; k < 5; k++) {
           s.step(SIM_STEP);
           if (k === 1 && (action === 'jump' || action === 'switchJump')) s.releaseJump();
